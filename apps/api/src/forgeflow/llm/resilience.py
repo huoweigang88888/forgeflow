@@ -25,6 +25,12 @@ from tenacity import (
 
 from forgeflow.llm.base import LLMCallResult, LLMFactory
 from forgeflow.monitoring.logger import get_logger
+from forgeflow.monitoring.metrics import (
+    fallback_triggered_total,
+    llm_call_duration_seconds,
+    llm_calls_total,
+    llm_tokens_total,
+)
 
 logger = get_logger(component="llm_resilience")
 
@@ -75,12 +81,11 @@ class LLMResilienceWrapper:
         # =====================================================================
         try:
             provider = LLMFactory.create(self.provider_name, model=self.model)
-            result = await self._call_with_retry(
-                provider, prompt, output_schema or {}, **kwargs
-            )
+            result = await self._call_with_retry(provider, prompt, output_schema or {}, **kwargs)
 
             if result.success and result.data:
                 result.latency_ms = int((time.perf_counter() - overall_start) * 1000)
+                self._record_metrics(result)
                 return result
 
             retry_count += result.retry_count
@@ -109,7 +114,7 @@ class LLMResilienceWrapper:
                     extracted_fields=list(extracted.keys()),
                 )
                 latency_ms = int((time.perf_counter() - overall_start) * 1000)
-                return LLMCallResult(
+                result = LLMCallResult(
                     success=True,
                     data=extracted,
                     raw_response=raw,
@@ -118,6 +123,8 @@ class LLMResilienceWrapper:
                     retry_count=retry_count,
                     latency_ms=latency_ms,
                 )
+                self._record_metrics(result)
+                return result
 
         except Exception as e:
             logger.warning(
@@ -137,7 +144,7 @@ class LLMResilienceWrapper:
         )
 
         latency_ms = int((time.perf_counter() - overall_start) * 1000)
-        return LLMCallResult(
+        result = LLMCallResult(
             success=False,
             data=self.fallback_value,
             fallback_used=True,
@@ -145,6 +152,47 @@ class LLMResilienceWrapper:
             retry_count=retry_count,
             latency_ms=latency_ms,
         )
+
+        # --- Record Metrics ---
+        self._record_metrics(result)
+        return result
+
+    def _record_metrics(self, result: LLMCallResult) -> None:
+        """Record Prometheus metrics for an LLM call result."""
+        status = "success" if result.success else "failure"
+        llm_calls_total.labels(
+            provider=self.provider_name,
+            model=self.model,
+            status=status,
+        ).inc()
+
+        llm_call_duration_seconds.labels(
+            provider=self.provider_name,
+            model=self.model,
+        ).observe(result.latency_ms / 1000.0)
+
+        if result.input_tokens:
+            llm_tokens_total.labels(
+                provider=self.provider_name,
+                model=self.model,
+                type="input",
+            ).inc(result.input_tokens)
+
+        if result.output_tokens:
+            llm_tokens_total.labels(
+                provider=self.provider_name,
+                model=self.model,
+                type="output",
+            ).inc(result.output_tokens)
+
+        if result.fallback_used:
+            layer = (
+                "layer3_static" if "static" in (result.fallback_reason or "") else "layer2_regex"
+            )
+            fallback_triggered_total.labels(
+                node="llm_call",
+                layer=layer,
+            ).inc()
 
     @retry(
         stop=stop_after_attempt(3),

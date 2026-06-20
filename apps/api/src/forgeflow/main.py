@@ -12,11 +12,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from forgeflow.api.router import api_router
-from forgeflow.api.v1.ws import close_redis_pool, router as ws_router
+from forgeflow.api.v1.ws import close_redis_pool
+from forgeflow.api.v1.ws import router as ws_router
 from forgeflow.core.config import get_settings
+from forgeflow.middleware.metrics import HTTPMetricsMiddleware
 from forgeflow.middleware.request_id import RequestIDMiddleware
 from forgeflow.monitoring.logger import get_logger, setup_logging
 from forgeflow.monitoring.sentry_setup import setup_sentry
+from forgeflow.monitoring.tracing import setup_tracing
 
 settings = get_settings()
 
@@ -32,6 +35,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if settings.sentry_dsn:
         setup_sentry(settings.sentry_dsn, settings.app_env)
 
+    # OpenTelemetry tracing (console exporter in dev, OTLP gRPC in prod)
+    setup_tracing(app, settings.otel_endpoint if settings.otel_endpoint else None)
+
     yield
 
     # --- Shutdown ---
@@ -40,6 +46,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await close_redis_pool()
     # Dispose of the database engine connection pool
     from forgeflow.db.engine import engine
+
     await engine.dispose()
 
 
@@ -71,6 +78,9 @@ def create_app() -> FastAPI:
 
     # Request ID
     app.add_middleware(RequestIDMiddleware)
+
+    # HTTP Metrics (outermost — captures all requests)
+    app.add_middleware(HTTPMetricsMiddleware)
 
     # --- Routers ---
     app.include_router(api_router)
