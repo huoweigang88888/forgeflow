@@ -1,0 +1,88 @@
+# Golden Test Cases — Amount / Threshold Variants (4 cases)
+
+- id: "golden_020"
+  name: "Exactly At Threshold — Low Value Rule Triggers"
+  description: "Order total at exactly $50.00 (threshold=50.00). Low-value rule should trigger."
+  tags: [amount:threshold, boundary]
+  input:
+    platform: "mock"
+    customer_email: "threshold@test.com"
+    issue_text: "My order is delayed by 2 weeks. Refund please."
+    order_id: "order_golden_020"
+  mock_overrides:
+    order:
+      total_price: 49.99
+      fulfillment_status: "fulfilled"
+    logistics:
+      status: "in_transit"
+      days_in_transit: 5
+  expected:
+    intent: "shipping_delay"
+    recommended_action: "auto_refund"
+    requires_approval: false
+    status: "resolved"
+
+- id: "golden_021"
+  name: "Just Above Threshold + Delay — Approval Required"
+  description: "Order total just above $50 threshold with delay — should require approval."
+  tags: [amount:above_threshold, approval]
+  input:
+    platform: "mock"
+    customer_email: "above_threshold@test.com"
+    issue_text: "Where is my order? It's been over 2 weeks!"
+    order_id: "order_golden_021"
+  mock_overrides:
+    order:
+      total_price: 50.01
+      fulfillment_status: "fulfilled"
+    logistics:
+      status: "delayed"
+      days_in_transit: 14
+  expected:
+    intent: "shipping_delay"
+    recommended_action: "auto_refund"
+    requires_approval: true
+    refund_amount_range: [49.00, 51.00]
+    status: "pending_approval"
+
+- id: "golden_022"
+  name: "High Value + No Delay — LLM Decision"
+  description: "High value order, no logistics delay — let LLM decide (may escalate or require approval)."
+  tags: [amount:high, llm_decision]
+  input:
+    platform: "mock"
+    customer_email: "highvalue2@test.com"
+    issue_text: "The product works but I changed my mind. Can I return it?"
+    order_id: "order_golden_022"
+  mock_overrides:
+    order:
+      total_price: 200.00
+      fulfillment_status: "fulfilled"
+    logistics:
+      status: "delivered"
+      days_in_transit: 0
+  expected:
+    intent: "refund_request"
+    recommended_action: "auto_refund"
+    requires_approval: true
+    status: "pending_approval"
+
+- id: "golden_023"
+  name: "Zero Amount — Escalate"
+  description: "Zero value order (data anomaly) — escalate to human for review."
+  tags: [amount:zero, edge_case]
+  input:
+    platform: "mock"
+    customer_email: "zero@test.com"
+    issue_text: "My free promotional item was damaged."
+    order_id: "order_golden_023"
+  mock_overrides:
+    order:
+      total_price: 0.00
+      fulfillment_status: "fulfilled"
+  expected:
+    intent: "damaged_item"
+    recommended_action: "auto_refund"
+    requires_approval: false
+    refund_amount_range: [0.00, 1.00]
+    status: "resolved"

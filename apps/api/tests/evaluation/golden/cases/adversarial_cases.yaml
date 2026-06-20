@@ -1,0 +1,85 @@
+# Golden Test Cases — Adversarial / Conflicting Cases (4 cases)
+
+- id: "golden_050"
+  name: "Chargeback Threat — Escalate"
+  description: "Customer threatens chargeback. Escalate to human for careful handling."
+  tags: [adversarial:chargeback_threat]
+  input:
+    platform: "mock"
+    customer_email: "angry@test.com"
+    issue_text: "If I don't get my refund TODAY I'm filing a chargeback with my bank. This is fraud!"
+    order_id: "order_golden_050"
+  mock_overrides:
+    order:
+      total_price: 250.00
+      fulfillment_status: "fulfilled"
+    logistics:
+      status: "delivered"
+  expected:
+    intent: "refund_request"
+    recommended_action: "escalate_to_human"
+    requires_approval: false
+    status: "escalated"
+
+- id: "golden_051"
+  name: "Repeat Refunder — High Risk — Approval Required"
+  description: "VIP customer with many refunds — agent should flag for review."
+  tags: [adversarial:repeat_refunder, approval]
+  input:
+    platform: "mock"
+    customer_email: "repeat_refunder@test.com"
+    issue_text: "This item is defective. I want my money back."
+    order_id: "order_golden_051"
+  mock_overrides:
+    order:
+      total_price: 120.00
+      fulfillment_status: "fulfilled"
+    customer_history:
+      total_orders: 12
+      total_spent: 2500.00
+      refund_count: 5
+      is_vip: true
+  expected:
+    intent: "damaged_item"
+    recommended_action: "auto_refund"
+    requires_approval: true
+    status: "pending_approval"
+
+- id: "golden_052"
+  name: "Conflicting Intent Signals — Escalate"
+  description: "Customer mentions both exchange AND refund — agent escalates for clarification."
+  tags: [adversarial:conflicting_signals]
+  input:
+    platform: "mock"
+    customer_email: "confused@test.com"
+    issue_text: "I want to exchange for a different size but also just give me my money back if that's easier."
+    order_id: "order_golden_052"
+  mock_overrides:
+    order:
+      total_price: 45.00
+      fulfillment_status: "fulfilled"
+  expected:
+    intent: "exchange_request"
+    recommended_action: "auto_refund"
+    requires_approval: false
+    refund_amount_range: [40.00, 50.00]
+    status: "resolved"
+
+- id: "golden_053"
+  name: "Impossible Request — Escalate"
+  description: "Customer demands physically impossible action. Escalate to human."
+  tags: [adversarial:impossible_request]
+  input:
+    platform: "mock"
+    customer_email: "impossible@test.com"
+    issue_text: "I need this delivered to Mars by tomorrow. If you can't do it, refund me 10x the price."
+    order_id: "order_golden_053"
+  mock_overrides:
+    order:
+      total_price: 60.00
+      fulfillment_status: "fulfilled"
+  expected:
+    intent: "other"
+    recommended_action: "escalate_to_human"
+    requires_approval: false
+    status: "escalated"

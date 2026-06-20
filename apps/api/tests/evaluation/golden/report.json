@@ -1,0 +1,249 @@
+{
+  "total": 30,
+  "passed": 30,
+  "failed": 0,
+  "pass_rate": 1.0,
+  "total_time_ms": 121462.0,
+  "results": [
+    {
+      "case_id": "golden_050",
+      "name": "Chargeback Threat — Escalate",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 18223.022200007108
+    },
+    {
+      "case_id": "golden_051",
+      "name": "Repeat Refunder — High Risk — Approval Required",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 8654.720999998972
+    },
+    {
+      "case_id": "golden_052",
+      "name": "Conflicting Intent Signals — Escalate",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 7453.910800002632
+    },
+    {
+      "case_id": "golden_053",
+      "name": "Impossible Request — Escalate",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 4188.122399995336
+    },
+    {
+      "case_id": "golden_020",
+      "name": "Exactly At Threshold — Low Value Rule Triggers",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 1041.9683000072837
+    },
+    {
+      "case_id": "golden_021",
+      "name": "Just Above Threshold + Delay — Approval Required",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 882.944500001031
+    },
+    {
+      "case_id": "golden_022",
+      "name": "High Value + No Delay — LLM Decision",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 3340.5911000008928
+    },
+    {
+      "case_id": "golden_023",
+      "name": "Zero Amount — Escalate",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 3786.743499993463
+    },
+    {
+      "case_id": "golden_040",
+      "name": "Empty Issue Text — Escalate",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 3005.794099997729
+    },
+    {
+      "case_id": "golden_041",
+      "name": "Missing Order ID — Process Anyway",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 3910.5220999917947
+    },
+    {
+      "case_id": "golden_042",
+      "name": "Very Long Issue Text — Process Anyway",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 4721.560899997712
+    },
+    {
+      "case_id": "golden_043",
+      "name": "Single Word Issue — Escalate",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 2899.3342999892775
+    },
+    {
+      "case_id": "golden_044",
+      "name": "Order ID in Text But Not in Field",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 1127.9074999911245
+    },
+    {
+      "case_id": "golden_010",
+      "name": "Unfulfilled + Low Value — Auto Refund",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 4742.523799999617
+    },
+    {
+      "case_id": "golden_011",
+      "name": "Fulfilled + High Value + Delay — Auto Refund with Approval",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 1157.7822999970522
+    },
+    {
+      "case_id": "golden_012",
+      "name": "Partially Fulfilled + Refund Request — Auto Refund",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 3874.7969000105513
+    },
+    {
+      "case_id": "golden_013",
+      "name": "Unknown Fulfillment + Low Value — Auto Refund",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 3868.9846999914153
+    },
+    {
+      "case_id": "golden_001",
+      "name": "Shipping Delay — Low Value — Auto Refund",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 1074.0205000038259
+    },
+    {
+      "case_id": "golden_002",
+      "name": "Refund Request — Unfulfilled — Auto Refund",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 3497.196399999666
+    },
+    {
+      "case_id": "golden_003",
+      "name": "Wrong Item — Unfulfilled — Auto Refund",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 4783.510099994601
+    },
+    {
+      "case_id": "golden_004",
+      "name": "Damaged Item — Low Value — Auto Refund",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 4032.488500000909
+    },
+    {
+      "case_id": "golden_005",
+      "name": "Exchange Request — Unfulfilled — Auto Refund",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 4690.4873000021325
+    },
+    {
+      "case_id": "golden_006",
+      "name": "Non-After-Sales Inquiry — Escalate",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 3073.17210000474
+    },
+    {
+      "case_id": "golden_030",
+      "name": "Shipment Delayed — Auto Refund",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 1195.4987999924924
+    },
+    {
+      "case_id": "golden_031",
+      "name": "Shipment Lost — High Value — Approval Required",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 1174.0442000009352
+    },
+    {
+      "case_id": "golden_032",
+      "name": "Shipment In Transit — No Refund",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 5252.85669999721
+    },
+    {
+      "case_id": "golden_033",
+      "name": "Shipment Delivered — Customer Disputes",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 1275.157299998682
+    },
+    {
+      "case_id": "golden_060",
+      "name": "Chinese — Shipping Delay — Process Correctly",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 897.215100005269
+    },
+    {
+      "case_id": "golden_061",
+      "name": "Spanish — Damaged Item — Process Correctly",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 8048.7201000069035
+    },
+    {
+      "case_id": "golden_062",
+      "name": "French — Exchange Request — Process Correctly",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "duration_ms": 4790.184999990743
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+name: Golden Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  golden-tests:
+    name: Run Golden Test Cases
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: forgeflow
+          POSTGRES_PASSWORD: forgeflow_test
+          POSTGRES_DB: forgeflow_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v2
+
+      - name: Install Python dependencies
+        working-directory: apps/api
+        run: uv sync --dev
+
+      - name: Run database migrations
+        working-directory: apps/api
+        env:
+          DB_URL: postgresql+asyncpg://forgeflow:forgeflow_test@localhost:5432/forgeflow_test
+        run: uv run alembic upgrade head
+
+      - name: Run Golden Tests
+        working-directory: apps/api
+        run: |
+          uv run pytest tests/evaluation/golden/runner.py -v \
+            --golden-dir tests/evaluation/golden/cases/ \
+            --junitxml=golden-results.xml
+
+      - name: Check Golden Thresholds
+        working-directory: apps/api
+        run: uv run python scripts/check_thresholds.py
+
+      - name: Upload Golden Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-test-results
+          path: apps/api/golden-results.xml

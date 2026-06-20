@@ -1,0 +1,53 @@
+# ForgeFlow AI - Pre-commit Hooks Configuration
+# Run: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # --- Python: Ruff (Lint + Format) ---
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff-format
+        files: ^apps/api/
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        files: ^apps/api/
+
+  # --- Python: MyPy ---
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        files: ^apps/api/
+        additional_dependencies:
+          - pydantic>=2.8
+          - sqlalchemy>=2.0
+          - types-redis
+        args: [--check-untyped-defs]
+
+  # --- TypeScript: Biome ---
+  - repo: https://github.com/biomejs/pre-commit
+    rev: v0.6.1
+    hooks:
+      - id: biome-check
+        files: ^apps/web/
+        additional_dependencies:
+          - "@biomejs/biome@1.9.2"
+
+  # --- General: Security & Sanity ---
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: detect-private-key
+      - id: detect-aws-credentials
+        args: [--allow-missing-credentials]
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: end-of-file-fixer
+        exclude: \.mako$
+      - id: trailing-whitespace
+        exclude: \.md$
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: check-merge-conflict

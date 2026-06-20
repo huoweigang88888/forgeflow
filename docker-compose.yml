@@ -1,0 +1,56 @@
+version: "3.9"
+
+services:
+  # ============================================================================
+  # PostgreSQL 16 + pgvector
+  # ============================================================================
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: forgeflow-postgres
+    environment:
+      POSTGRES_DB: forgeflow
+      POSTGRES_USER: forgeflow
+      POSTGRES_PASSWORD: forgeflow_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U forgeflow -d forgeflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # ============================================================================
+  # Redis 7.2
+  # ============================================================================
+  redis:
+    image: redis:7.2-alpine
+    container_name: forgeflow-redis
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --requirepass redis_dev
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local

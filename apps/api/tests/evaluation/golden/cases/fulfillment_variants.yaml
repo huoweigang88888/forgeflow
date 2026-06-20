@@ -1,0 +1,84 @@
+# Golden Test Cases — Fulfillment Variants (4 cases)
+
+- id: "golden_010"
+  name: "Unfulfilled + Low Value — Auto Refund"
+  description: "Unfulfilled order below threshold — should auto refund without approval."
+  tags: [fulfillment:unfulfilled, amount:low]
+  input:
+    platform: "mock"
+    customer_email: "unfulfilled@test.com"
+    issue_text: "Why hasn't my order shipped yet? I want a refund!"
+    order_id: "order_golden_010"
+  mock_overrides:
+    order:
+      total_price: 20.00
+      fulfillment_status: "unfulfilled"
+  expected:
+    intent: "refund_request"
+    recommended_action: "auto_refund"
+    requires_approval: false
+    refund_amount_range: [15.00, 25.00]
+    status: "resolved"
+
+- id: "golden_011"
+  name: "Fulfilled + High Value + Delay — Auto Refund with Approval"
+  description: "Fulfilled high-value order with logistics delay — refund requires approval."
+  tags: [fulfillment:fulfilled, amount:high, approval]
+  input:
+    platform: "mock"
+    customer_email: "highvalue@test.com"
+    issue_text: "My order was supposed to arrive 10 days ago. Where is it?"
+    order_id: "order_golden_011"
+  mock_overrides:
+    order:
+      total_price: 150.00
+      fulfillment_status: "fulfilled"
+    logistics:
+      status: "delayed"
+      days_in_transit: 20
+  expected:
+    intent: "shipping_delay"
+    recommended_action: "auto_refund"
+    requires_approval: true
+    refund_amount_range: [140.00, 160.00]
+    status: "pending_approval"
+
+- id: "golden_012"
+  name: "Partially Fulfilled + Refund Request — Auto Refund"
+  description: "Partially fulfilled order — should still auto refund if below threshold."
+  tags: [fulfillment:partial, amount:low]
+  input:
+    platform: "mock"
+    customer_email: "partial@test.com"
+    issue_text: "Only half my order arrived. I want the rest refunded."
+    order_id: "order_golden_012"
+  mock_overrides:
+    order:
+      total_price: 40.00
+      fulfillment_status: "partial"
+  expected:
+    intent: "wrong_item"
+    recommended_action: "auto_refund"
+    requires_approval: false
+    refund_amount_range: [35.00, 45.00]
+    status: "resolved"
+
+- id: "golden_013"
+  name: "Unknown Fulfillment + Low Value — Auto Refund"
+  description: "Unknown fulfillment status, low value — auto refund as safe default."
+  tags: [fulfillment:unknown, amount:low]
+  input:
+    platform: "mock"
+    customer_email: "unknown_status@test.com"
+    issue_text: "I received the wrong item. Please help."
+    order_id: "order_golden_013"
+  mock_overrides:
+    order:
+      total_price: 28.00
+      fulfillment_status: "unknown"
+  expected:
+    intent: "wrong_item"
+    recommended_action: "auto_refund"
+    requires_approval: false
+    refund_amount_range: [23.00, 33.00]
+    status: "resolved"

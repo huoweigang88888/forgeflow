@@ -1,0 +1,94 @@
+# Golden Test Cases — Logistics Variants (4 cases)
+
+- id: "golden_030"
+  name: "Shipment Delayed — Auto Refund"
+  description: "Clear delay with many days in transit — auto refund."
+  tags: [logistics:delayed]
+  input:
+    platform: "mock"
+    customer_email: "delayed@test.com"
+    issue_text: "My package has been stuck in transit for 3 weeks!"
+    order_id: "order_golden_030"
+  mock_overrides:
+    order:
+      total_price: 45.00
+      fulfillment_status: "fulfilled"
+    logistics:
+      status: "delayed"
+      days_in_transit: 21
+      status_detail: "Package delayed at sorting facility"
+  expected:
+    intent: "shipping_delay"
+    recommended_action: "auto_refund"
+    requires_approval: false
+    refund_amount_range: [40.00, 50.00]
+    status: "resolved"
+
+- id: "golden_031"
+  name: "Shipment Lost — High Value — Approval Required"
+  description: "Package declared lost, high value — refund with approval."
+  tags: [logistics:lost, amount:high, approval]
+  input:
+    platform: "mock"
+    customer_email: "lost@test.com"
+    issue_text: "My package was declared lost by the carrier. I need help!"
+    order_id: "order_golden_031"
+  mock_overrides:
+    order:
+      total_price: 120.00
+      fulfillment_status: "fulfilled"
+    logistics:
+      status: "lost"
+      days_in_transit: 30
+      status_detail: "Package confirmed lost by carrier"
+  expected:
+    intent: "shipping_delay"
+    recommended_action: "auto_refund"
+    requires_approval: true
+    refund_amount_range: [110.00, 130.00]
+    status: "pending_approval"
+
+- id: "golden_032"
+  name: "Shipment In Transit — No Refund"
+  description: "Package en route, not delayed — agent may just notify."
+  tags: [logistics:in_transit, notify]
+  input:
+    platform: "mock"
+    customer_email: "intransit@test.com"
+    issue_text: "When will my order arrive?"
+    order_id: "order_golden_032"
+  mock_overrides:
+    order:
+      total_price: 65.00
+      fulfillment_status: "fulfilled"
+    logistics:
+      status: "in_transit"
+      days_in_transit: 2
+      status_detail: "Package is on its way"
+  expected:
+    intent: "shipping_delay"
+    recommended_action: "send_notification"
+    requires_approval: false
+    status: "resolved"
+
+- id: "golden_033"
+  name: "Shipment Delivered — Customer Disputes"
+  description: "Order marked delivered but customer claims not received."
+  tags: [logistics:delivered, dispute]
+  input:
+    platform: "mock"
+    customer_email: "delivered@test.com"
+    issue_text: "It says delivered but I never got it. I want a refund."
+    order_id: "order_golden_033"
+  mock_overrides:
+    order:
+      total_price: 80.00
+      fulfillment_status: "fulfilled"
+    logistics:
+      status: "delivered"
+      days_in_transit: 0
+  expected:
+    intent: "shipping_delay"
+    recommended_action: "auto_refund"
+    requires_approval: true
+    status: "pending_approval"

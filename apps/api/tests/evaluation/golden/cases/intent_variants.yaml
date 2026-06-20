@@ -1,0 +1,117 @@
+# Golden Test Cases — Intent Variants (6 cases)
+# One per intent category, using mock provider defaults.
+
+- id: "golden_001"
+  name: "Shipping Delay — Low Value — Auto Refund"
+  description: "Customer reports shipping delay for low-value order. Should auto-refund without approval."
+  tags: [intent:shipping_delay, fulfillment:fulfilled, amount:low]
+  input:
+    platform: "mock"
+    customer_email: "test_buyer@example.com"
+    issue_text: "My order hasn't arrived for 15 days. Where is it?"
+    order_id: "order_golden_001"
+  mock_overrides:
+    order:
+      total_price: 25.00
+      fulfillment_status: "fulfilled"
+    logistics:
+      status: "delayed"
+      days_in_transit: 15
+  expected:
+    intent: "shipping_delay"
+    recommended_action: "auto_refund"
+    requires_approval: false
+    refund_amount_range: [20.00, 30.00]
+    status: "resolved"
+
+- id: "golden_002"
+  name: "Refund Request — Unfulfilled — Auto Refund"
+  description: "Customer requests refund for unfulfilled order. Should auto-refund."
+  tags: [intent:refund_request, fulfillment:unfulfilled, amount:low]
+  input:
+    platform: "mock"
+    customer_email: "buyer@test.com"
+    issue_text: "I want my money back. Please refund my order now."
+    order_id: "order_golden_002"
+  mock_overrides:
+    order:
+      total_price: 45.60
+      fulfillment_status: "unfulfilled"
+  expected:
+    intent: "refund_request"
+    recommended_action: "auto_refund"
+    requires_approval: false
+    status: "resolved"
+
+- id: "golden_003"
+  name: "Wrong Item — Unfulfilled — Auto Refund"
+  description: "Customer received wrong item but order unfulfilled. Auto refund."
+  tags: [intent:wrong_item, fulfillment:unfulfilled, amount:low]
+  input:
+    platform: "mock"
+    customer_email: "wrong_item@test.com"
+    issue_text: "You sent me the wrong color! I ordered blue but got red!"
+    order_id: "order_golden_003"
+  mock_overrides:
+    order:
+      total_price: 30.00
+      fulfillment_status: "unfulfilled"
+  expected:
+    intent: "wrong_item"
+    recommended_action: "auto_refund"
+    requires_approval: false
+    status: "resolved"
+
+- id: "golden_004"
+  name: "Damaged Item — Low Value — Auto Refund"
+  description: "Damaged item for low-value order. Auto refund."
+  tags: [intent:damaged_item, fulfillment:fulfilled, amount:low]
+  input:
+    platform: "mock"
+    customer_email: "upset_buyer@test.com"
+    issue_text: "The product arrived completely smashed! I want a replacement!"
+    order_id: "order_golden_004"
+  mock_overrides:
+    order:
+      total_price: 35.00
+      fulfillment_status: "fulfilled"
+  expected:
+    intent: "damaged_item"
+    recommended_action: "auto_refund"
+    requires_approval: false
+    refund_amount_range: [30.00, 40.00]
+    status: "resolved"
+
+- id: "golden_005"
+  name: "Exchange Request — Unfulfilled — Auto Refund"
+  description: "Exchange request with unfulfilled order. Auto refund rather than exchange."
+  tags: [intent:exchange_request, fulfillment:unfulfilled, amount:medium]
+  input:
+    platform: "mock"
+    customer_email: "exchanger@test.com"
+    issue_text: "Can you exchange my size M for a size L?"
+    order_id: "order_golden_005"
+  mock_overrides:
+    order:
+      total_price: 55.00
+      fulfillment_status: "unfulfilled"
+  expected:
+    intent: "exchange_request"
+    recommended_action: "auto_refund"
+    requires_approval: false
+    status: "resolved"
+
+- id: "golden_006"
+  name: "Non-After-Sales Inquiry — Escalate"
+  description: "Customer asks about restocking, not an after-sales issue. Escalate."
+  tags: [intent:other, escalation]
+  input:
+    platform: "mock"
+    customer_email: "curious@test.com"
+    issue_text: "When will you restock the blue t-shirt?"
+    order_id: null
+  expected:
+    intent: "other"
+    recommended_action: "escalate_to_human"
+    requires_approval: false
+    status: "escalated"

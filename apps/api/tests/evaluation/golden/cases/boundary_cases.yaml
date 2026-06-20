@@ -1,0 +1,98 @@
+# Golden Test Cases — Boundary / Edge Cases (5 cases)
+
+- id: "golden_040"
+  name: "Empty Issue Text — Escalate"
+  description: "Empty issue text should be caught and escalated."
+  tags: [boundary:empty_input]
+  input:
+    platform: "mock"
+    customer_email: "empty@test.com"
+    issue_text: ""
+    order_id: "order_golden_040"
+  expected:
+    intent: "other"
+    recommended_action: "escalate_to_human"
+    requires_approval: false
+    status: "escalated"
+
+- id: "golden_041"
+  name: "Missing Order ID — Process Anyway"
+  description: "No order ID provided but valid intent. Agent should process based on text alone."
+  tags: [boundary:missing_order_id]
+  input:
+    platform: "mock"
+    customer_email: "no_order@test.com"
+    issue_text: "I need a refund for my last purchase. It was broken."
+    order_id: null
+  expected:
+    intent: "damaged_item"
+    # Without an order, may escalate or attempt to process
+    recommended_action: "escalate_to_human"
+    requires_approval: false
+    status: "escalated"
+
+- id: "golden_042"
+  name: "Very Long Issue Text — Process Anyway"
+  description: "Long rambling customer message. Agent should handle."
+  tags: [boundary:long_text]
+  input:
+    platform: "mock"
+    customer_email: "verbose@test.com"
+    issue_text: >
+      I am writing to express my extreme dissatisfaction with my recent purchase.
+      The item took over 3 weeks to arrive, when it was promised in 5 days. When
+      it finally arrived, the box was damaged and the product inside was completely
+      broken. I tried contacting your support team 4 times but no one responded.
+      This is absolutely unacceptable. I demand a full refund immediately and I
+      want to speak with a manager. I have been a loyal customer for years and
+      this experience has been terrible.
+    order_id: "order_golden_042"
+  mock_overrides:
+    order:
+      total_price: 75.00
+      fulfillment_status: "fulfilled"
+    logistics:
+      status: "delayed"
+      days_in_transit: 21
+  expected:
+    intent: "damaged_item"
+    recommended_action: "auto_refund"
+    requires_approval: true
+    status: "pending_approval"
+
+- id: "golden_043"
+  name: "Single Word Issue — Escalate"
+  description: "Single word 'help' — should escalate for unclear intent."
+  tags: [boundary:single_word]
+  input:
+    platform: "mock"
+    customer_email: "oneword@test.com"
+    issue_text: "help"
+    order_id: null
+  expected:
+    intent: "other"
+    recommended_action: "escalate_to_human"
+    requires_approval: false
+    status: "escalated"
+
+- id: "golden_044"
+  name: "Order ID in Text But Not in Field"
+  description: "Order ID mentioned in issue text but not in order_id field."
+  tags: [boundary:extracted_order_id]
+  input:
+    platform: "mock"
+    customer_email: "text_order@test.com"
+    issue_text: "Order #ORD-99999 was supposed to arrive last week but it's missing."
+    order_id: null
+  mock_overrides:
+    order:
+      total_price: 32.00
+      fulfillment_status: "fulfilled"
+    logistics:
+      status: "lost"
+      days_in_transit: 10
+  expected:
+    intent: "shipping_delay"
+    recommended_action: "auto_refund"
+    requires_approval: false
+    status: "resolved"

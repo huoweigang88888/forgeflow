@@ -1,0 +1,168 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ===========================================================================
+  # Python: Lint & Type Check
+  # ===========================================================================
+  python-lint:
+    name: Python Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        working-directory: apps/api
+        run: uv sync --group dev
+
+      - name: Ruff (lint)
+        working-directory: apps/api
+        run: uv run ruff check src/
+
+      - name: Ruff (format check)
+        working-directory: apps/api
+        run: uv run ruff format --check src/
+
+      - name: MyPy (type check)
+        working-directory: apps/api
+        run: uv run mypy src/forgeflow --check-untyped-defs
+
+  # ===========================================================================
+  # Python: Tests
+  # ===========================================================================
+  python-test:
+    name: Python Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: forgeflow_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7.2-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        working-directory: apps/api
+        run: uv sync --group dev
+
+      - name: Run migrations
+        working-directory: apps/api
+        env:
+          DB_URL: postgresql+asyncpg://test:test@localhost:5432/forgeflow_test
+        run: uv run alembic upgrade head
+
+      - name: Run tests
+        working-directory: apps/api
+        env:
+          DB_URL: postgresql+asyncpg://test:test@localhost:5432/forgeflow_test
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key-for-ci
+        run: uv run pytest tests/ -v --tb=short
+
+  # ===========================================================================
+  # TypeScript: Lint & Type Check
+  # ===========================================================================
+  web-lint:
+    name: Web Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --filter @forgeflow/web
+
+      - name: Biome (lint + format)
+        working-directory: apps/web
+        run: npx @biomejs/biome check src/
+
+      - name: TypeScript (type check)
+        working-directory: apps/web
+        run: npx tsc --noEmit
+
+  # ===========================================================================
+  # Secrets Scan
+  # ===========================================================================
+  secrets-scan:
+    name: Secrets Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect committed secrets
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          config-path: .gitleaks.toml
+
+  # ===========================================================================
+  # Gate
+  # ===========================================================================
+  check:
+    name: All Checks Passed
+    needs: [secrets-scan, python-lint, python-test, web-lint]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all required jobs
+        run: |
+          echo "python-lint: ${{ needs.python-lint.result }}"
+          echo "python-test: ${{ needs.python-test.result }}"
+          echo "web-lint: ${{ needs.web-lint.result }}"
+
+          if [[ "${{ needs.python-lint.result }}" != "success" ]]; then exit 1; fi
+          if [[ "${{ needs.python-test.result }}" != "success" ]]; then exit 1; fi
+          if [[ "${{ needs.web-lint.result }}" != "success" ]]; then exit 1; fi
+          echo "All checks passed!"

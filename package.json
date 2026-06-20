@@ -1,0 +1,29 @@
+{
+  "name": "forgeflow",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ForgeFlow AI - AI After-Sales Workforce for E-commerce",
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"make -C apps/api dev\" \"pnpm --filter @forgeflow/web dev\"",
+    "dev:api": "make -C apps/api dev",
+    "dev:web": "pnpm --filter @forgeflow/web dev",
+    "lint": "pnpm --filter @forgeflow/web lint && make -C apps/api lint",
+    "typecheck": "pnpm --filter @forgeflow/web typecheck && make -C apps/api typecheck",
+    "test": "pnpm --filter @forgeflow/web test && make -C apps/api test",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "db:migrate": "make -C apps/api db-migrate",
+    "db:rollback": "make -C apps/api db-rollback",
+    "db:seed": "make -C apps/api db-seed",
+    "setup": "pnpm install && make -C apps/api setup",
+    "clean": "pnpm --filter @forgeflow/web clean && make -C apps/api clean"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

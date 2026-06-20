@@ -1,0 +1,66 @@
+# =============================================================================
+# ForgeFlow AI - .gitignore
+# =============================================================================
+
+# --- Dependencies ---
+node_modules/
+.pnpm-store/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+.uv/
+uv.lock
+
+# --- Ruff ---
+.ruff_cache/
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+
+# --- Environment & Secrets ---
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+credentials.json
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# --- Next.js ---
+.next/
+out/
+
+# --- Testing & Coverage ---
+.coverage
+htmlcov/
+.pytest_cache/
+coverage/
+*.lcov
+
+# --- Docker ---
+docker-data/
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Temporary files ---
+tmp/
+temp/
+.tmp/

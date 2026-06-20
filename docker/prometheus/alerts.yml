@@ -1,0 +1,122 @@
+# =============================================================================
+# ForgeFlow AI - Prometheus Alerting Rules
+# =============================================================================
+
+groups:
+  - name: forgeflow-critical
+    interval: 30s
+    rules:
+      # --- API Availability ---
+      - alert: API_Down
+        expr: up{job="forgeflow-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "ForgeFlow API is down"
+          description: "The API service has been unreachable for 2 minutes."
+
+      # --- Error Rate ---
+      - alert: HighErrorRate
+        expr: |
+          rate(http_requests_total{status=~"5.."}[5m]) /
+          rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "High 5xx error rate (> 5%)"
+          description: "API 5xx error rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+
+      # --- Response Latency ---
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "API P95 latency > 1 second"
+          description: "P95 latency is {{ $value }}s over the last 5 minutes."
+
+      # --- Agent Metrics ---
+      - alert: AgentFallbackRateHigh
+        expr: |
+          rate(agent_fallback_total[15m]) /
+          rate(agent_tickets_total[15m]) > 0.10
+        for: 10m
+        labels:
+          severity: warning
+          team: ml
+        annotations:
+          summary: "Agent fallback rate > 10%"
+          description: "{{ $value | humanizePercentage }} of tickets are using fallback. Possible LLM degradation."
+
+      - alert: AgentLLMJSONParseFailureHigh
+        expr: |
+          rate(llm_json_parse_failures_total[15m]) /
+          rate(llm_calls_total[15m]) > 0.02
+        for: 10m
+        labels:
+          severity: critical
+          team: ml
+        annotations:
+          summary: "LLM JSON parse failure rate > 2%"
+          description: "{{ $value | humanizePercentage }} of LLM calls fail JSON parsing. Check model output."
+
+      - alert: AgentApprovalRateHigh
+        expr: |
+          rate(agent_pending_approval_total[30m]) /
+          rate(agent_tickets_total[30m]) > 0.50
+        for: 15m
+        labels:
+          severity: warning
+          team: product
+        annotations:
+          summary: "Agent approval rate > 50%"
+          description: "{{ $value | humanizePercentage }} of tickets require approval. Auto-resolve rate may be dropping."
+
+      # --- Infrastructure ---
+      - alert: DatabaseConnectionPoolHigh
+        expr: db_connection_pool_used / db_connection_pool_max > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "DB connection pool > 85% utilized"
+          description: "Database connection pool at {{ $value | humanizePercentage }}."
+
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.90
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Redis memory > 90%"
+          description: "Redis memory usage at {{ $value | humanizePercentage }}."
+
+      # --- LLM Cost ---
+      - alert: LLMCostSpike
+        expr: rate(llm_cost_dollars_total[1h]) > 5.0
+        for: 15m
+        labels:
+          severity: warning
+          team: finance
+        annotations:
+          summary: "LLM cost spike detected"
+          description: "LLM cost is ${{ $value }}/hour, exceeding the $5/hour threshold."
+
+      # --- Intent Drift ---
+      - alert: IntentDistributionDrift
+        expr: intent_distribution_kl_divergence > 0.30
+        for: 30m
+        labels:
+          severity: info
+          team: ml
+        annotations:
+          summary: "Intent distribution drift detected"
+          description: "KL divergence is {{ $value }}, exceeding the 0.30 threshold."

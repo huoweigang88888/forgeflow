@@ -1,0 +1,64 @@
+# Golden Test Cases — Non-English Cases (3 cases)
+
+- id: "golden_060"
+  name: "Chinese — Shipping Delay — Process Correctly"
+  description: "Customer reports shipping delay in Chinese."
+  tags: [non_english:zh, shipping_delay]
+  input:
+    platform: "mock"
+    customer_email: "chinese@test.com"
+    issue_text: "我的订单已经15天没有收到了，在哪里？请退款。"
+    order_id: "order_golden_060"
+  mock_overrides:
+    order:
+      total_price: 35.00
+      fulfillment_status: "fulfilled"
+    logistics:
+      status: "delayed"
+      days_in_transit: 15
+  expected:
+    intent: "shipping_delay"
+    recommended_action: "auto_refund"
+    requires_approval: false
+    refund_amount_range: [30.00, 40.00]
+    status: "resolved"
+
+- id: "golden_061"
+  name: "Spanish — Damaged Item — Process Correctly"
+  description: "Customer reports damaged item in Spanish."
+  tags: [non_english:es, damaged_item]
+  input:
+    platform: "mock"
+    customer_email: "spanish@test.com"
+    issue_text: "El producto llegó roto. Necesito un reembolso o un reemplazo urgente."
+    order_id: "order_golden_061"
+  mock_overrides:
+    order:
+      total_price: 42.00
+      fulfillment_status: "fulfilled"
+  expected:
+    intent: "damaged_item"
+    recommended_action: "auto_refund"
+    requires_approval: false
+    refund_amount_range: [37.00, 47.00]
+    status: "resolved"
+
+- id: "golden_062"
+  name: "French — Exchange Request — Process Correctly"
+  description: "Customer requests exchange in French."
+  tags: [non_english:fr, exchange_request]
+  input:
+    platform: "mock"
+    customer_email: "french@test.com"
+    issue_text: "Bonjour, je voudrais échanger ma commande pour une taille plus grande. Est-ce possible ?"
+    order_id: "order_golden_062"
+  mock_overrides:
+    order:
+      total_price: 48.00
+      fulfillment_status: "unfulfilled"
+  expected:
+    intent: "exchange_request"
+    recommended_action: "auto_refund"
+    requires_approval: false
+    refund_amount_range: [43.00, 53.00]
+    status: "resolved"

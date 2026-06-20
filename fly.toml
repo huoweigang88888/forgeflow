@@ -1,0 +1,45 @@
+# =============================================================================
+# ForgeFlow AI - Fly.io Deployment Config
+# =============================================================================
+# Deploy to Fly.io:
+#   flyctl launch
+#   flyctl secrets import < .env.production
+#   flyctl deploy
+#
+# For the API service:
+#   flyctl launch --name forgeflow-api --dockerfile apps/api/Dockerfile
+
+app = "forgeflow-api"
+primary_region = "iad"  # US East (change to nearest region)
+
+[build]
+  dockerfile = "apps/api/Dockerfile"
+
+[env]
+  PORT = "8000"
+  APP_ENV = "production"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "get"
+    path = "/api/health"
+
+# Scale based on load
+[vm]
+  cpu_kind = "shared-cpu-1x"
+  cpus = 1
+  memory_mb = 512
+
+# Metrics
+[metrics]
+  port = 9090
+  path = "/metrics"
