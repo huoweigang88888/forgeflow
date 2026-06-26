@@ -5,11 +5,15 @@ import { CheckCircle2, Clock, Inbox, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
-import { StatsCard } from "@/components/dashboard/stats-card";
-import { TrendLineChart } from "@/components/dashboard/trend-line-chart";
 import { LLMCostChart } from "@/components/dashboard/llm-cost-chart";
 import { ProcessingRateChart } from "@/components/dashboard/processing-rate-chart";
-import { getDashboardStats, getTicketMetrics, listTickets } from "@/lib/tickets";
+import { StatsCard } from "@/components/dashboard/stats-card";
+import { TrendLineChart } from "@/components/dashboard/trend-line-chart";
+import {
+	getDashboardStats,
+	getTicketMetrics,
+	listTickets,
+} from "@/lib/tickets";
 import type { TicketListItem, TicketStatus } from "@/types";
 
 const STATUS_COLORS: Record<TicketStatus, string> = {
@@ -155,9 +159,7 @@ export default function DashboardPage() {
 			{/* Charts Row 1 — Processing Rate + LLM Cost */}
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
 				<div className="lg:col-span-1">
-					<ProcessingRateChart
-						data={metrics?.processing_rate ?? []}
-					/>
+					<ProcessingRateChart data={metrics?.processing_rate ?? []} />
 				</div>
 				<div className="lg:col-span-2">
 					<LLMCostChart data={metrics?.llm_cost_daily ?? []} />

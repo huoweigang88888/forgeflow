@@ -1,0 +1,85 @@
+# =============================================================================
+# ForgeFlow AI - .vercelignore
+# Exclude everything not needed for the Next.js web frontend build.
+# =============================================================================
+
+# --- Backend (not needed for web build) ---
+apps/api/
+
+# --- Dependencies (installed by Vercel) ---
+node_modules/
+.pnpm-store/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+.uv/
+uv.lock
+.venv/
+venv/
+env/
+
+# --- Cache ---
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# --- Docker ---
+docker/
+docker-compose.yml
+docker-compose.prod.yml
+Dockerfile
+.dockerignore
+
+# --- CI/CD ---
+.github/
+fly.toml
+
+# --- Docs & Scripts ---
+docs/
+scripts/
+db/
+*.md
+!README.md
+
+# --- IDE & OS ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# --- Environment & Secrets ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+
+# --- Testing ---
+.coverage
+htmlcov/
+coverage/
+*.lcov
+
+# --- Logs & Temp ---
+*.log
+logs/
+tmp/
+temp/
+.tmp/
+.vercel
+
+# --- Misc ---
+.lintstagedrc.js
+.pre-commit-config.yaml
+.gitleaks.toml
+.gitignore

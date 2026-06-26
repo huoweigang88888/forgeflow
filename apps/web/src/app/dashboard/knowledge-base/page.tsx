@@ -12,8 +12,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-import { PolicyCard } from "@/components/knowledge-base/policy-card";
 import { FileUploadModal } from "@/components/knowledge-base/file-upload-modal";
+import { PolicyCard } from "@/components/knowledge-base/policy-card";
 import { SearchConsole } from "@/components/knowledge-base/search-console";
 import {
 	createPolicy,

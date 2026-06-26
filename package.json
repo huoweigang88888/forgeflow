@@ -20,10 +20,11 @@
     "clean": "pnpm --filter @forgeflow/web clean && make -C apps/api clean"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.1.2",
+    "next": "^14.2.35"
   },
   "engines": {
-    "node": ">=20.0.0",
+    "node": "22.x",
     "pnpm": ">=9.0.0"
   }
 }

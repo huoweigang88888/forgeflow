@@ -1,8 +1,7 @@
 {
-  "buildCommand": "pnpm install --filter @forgeflow/web && pnpm --filter @forgeflow/web build",
-  "outputDirectory": "apps/web/.next",
-  "installCommand": "",
   "framework": "nextjs",
+  "buildCommand": "pnpm --filter @forgeflow/web build",
+  "outputDirectory": "apps/web/.next",
   "build": {
     "env": {
       "NEXT_PUBLIC_API_URL": "https://forgeflow-api.fly.dev",

@@ -2,21 +2,35 @@
 
 import { useAuthStore } from "@/lib/auth-store";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 /**
  * Shopify OAuth Callback Page.
  *
  * Shopify redirects here after the merchant approves the app.
- * This page:
- * 1. Reads OAuth params from the URL (code, shop, hmac, state, timestamp)
- * 2. Calls the backend callback endpoint to exchange the code
- * 3. Stores the ForgeFlow JWT in the auth store
- * 4. Redirects to /dashboard/settings
  *
  * Route: /auth/shopify/callback?code={}&shop={}&hmac={}&state={}&timestamp={}
  */
 export default function ShopifyCallbackPage() {
+	return (
+		<Suspense
+			fallback={
+				<div className="flex min-h-screen items-center justify-center bg-slate-50">
+					<div className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg border border-slate-200 text-center">
+						<div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
+						<h1 className="text-lg font-semibold text-slate-800 mb-2">
+							Loading...
+						</h1>
+					</div>
+				</div>
+			}
+		>
+			<ShopifyCallbackInner />
+		</Suspense>
+	);
+}
+
+function ShopifyCallbackInner() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const { setToken } = useAuthStore();

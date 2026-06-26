@@ -9,7 +9,8 @@ import { useTicketFilterStore } from "@/lib/store";
 import { listTickets } from "@/lib/tickets";
 
 export default function TicketsPage() {
-	const { status, platform, page, pageSize, setStatus, setPlatform, setPage } = useTicketFilterStore();
+	const { status, platform, page, pageSize, setStatus, setPlatform, setPage } =
+		useTicketFilterStore();
 
 	const { data, isLoading } = useQuery({
 		queryKey: ["tickets", { page, pageSize, status, platform }],
