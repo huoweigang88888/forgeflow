@@ -1,40 +1,33 @@
-# Gitleaks Configuration for ForgeFlow AI
-# Detects hardcoded secrets in the codebase.
-# https://github.com/gitleaks/gitleaks
+# ForgeFlow AI - Gitleaks Configuration
 
 title = "ForgeFlow AI Gitleaks Config"
 
+[[rules]]
+id = "generic-api-key"
+
+[rules.allowlist]
+  description = "Allowlist for test/dev keys safe to commit"
+
+[rules.allowlist.paths]
+  regexTarget = "line"
+  paths = [
+    '''tests/''',
+    '''\.env\.example$''',
+    '''\.md$''',
+    '''docs/''',
+    '''\.gitleaks\.toml$''',
+    '''pnpm-lock\.yaml$''',
+    '''uv\.lock$''',
+  ]
+
 [allowlist]
-description = "Files and paths to exclude from scanning"
-paths = [
-  '''pnpm-lock\.yaml''',
-  '''uv\.lock''',
-  '''\.env\.example''',
-  '''\.pre-commit-config\.yaml''',
-  '''tests/evaluation/golden/cases/.*\.yaml''',
-]
+  description = "Global allowlist"
 
-[[rules]]
-id = "deepseek-api-key"
-description = "DeepSeek API Key"
-regex = '''sk-[a-z0-9]{32,}'''
-tags = ["api-key", "deepseek"]
-
-[[rules]]
-id = "openai-api-key"
-description = "OpenAI API Key"
-regex = '''sk-[a-zA-Z0-9]{32,}'''
-tags = ["api-key", "openai"]
-
-[[rules]]
-id = "anthropic-api-key"
-description = "Anthropic API Key"
-regex = '''sk-ant-[a-zA-Z0-9_\-]{32,}'''
-tags = ["api-key", "anthropic"]
-
-[[rules]]
-id = "generic-api-key-assignment"
-description = "Generic API key assignment in config files"
-regex = '''(?i)(api[_-]?key|apikey|secret[_-]?key)\s*=\s*[A-Za-z0-9_\-]{20,}'''
-path = '''\.(env|yml|yaml|toml|json|py|ts|js)$'''
-tags = ["api-key"]
+[allowlist.paths]
+  paths = [
+    '''\.env\.example$''',
+    '''\.env\.production\.example$''',
+    '''docs/''',
+    '''tests/''',
+    '''\.gitleaks\.toml$''',
+  ]

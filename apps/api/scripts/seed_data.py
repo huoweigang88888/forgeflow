@@ -21,7 +21,7 @@ async def seed_prompts():
             for p in created:
                 print(f"   - {p.prompt_name} ({p.version})")
         else:
-            print("ℹ️  Prompt templates already seeded — skipping")
+            print("  Prompt templates already seeded -- skipping")
         return created
 
 

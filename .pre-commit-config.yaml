@@ -13,17 +13,24 @@ repos:
         args: [--fix, --exit-non-zero-on-fix]
         files: ^apps/api/
 
-  # --- Python: MyPy ---
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.2
+  # --- Python: MyPy (local, uses project's own mypy) ---
+  - repo: local
     hooks:
       - id: mypy
+        name: mypy
+        entry: uv
+        language: system
+        args:
+          - "run"
+          - "--directory"
+          - "apps/api"
+          - "python"
+          - "-m"
+          - "mypy"
+          - "--check-untyped-defs"
+          - "src/forgeflow"
         files: ^apps/api/
-        additional_dependencies:
-          - pydantic>=2.8
-          - sqlalchemy>=2.0
-          - types-redis
-        args: [--check-untyped-defs]
+        pass_filenames: false
 
   # --- TypeScript: Biome ---
   - repo: https://github.com/biomejs/pre-commit

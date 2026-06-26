@@ -16,7 +16,7 @@ import json
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from forgeflow.agent.nodes.decision import make_decision_node
 from forgeflow.agent.state import AgentState
@@ -67,7 +67,13 @@ class DecisionEvaluator:
     WEIGHT_APPROVAL_RECALL = 0.30  # Safety-critical
     WEIGHT_APPROVAL_PRECISION = 0.10
 
-    ACTIONS = ["auto_refund", "auto_exchange", "investigate", "escalate_to_human", "send_notification"]
+    ACTIONS: ClassVar[list[str]] = [
+        "auto_refund",
+        "auto_exchange",
+        "investigate",
+        "escalate_to_human",
+        "send_notification",
+    ]
 
     def __init__(
         self,
@@ -130,11 +136,13 @@ class DecisionEvaluator:
             if r["predicted_action"] == r["expected_action"]:
                 action_correct += 1
             else:
-                action_errors.append({
-                    "test_case_id": r["test_case_id"],
-                    "expected": r["expected_action"],
-                    "predicted": r["predicted_action"],
-                })
+                action_errors.append(
+                    {
+                        "test_case_id": r["test_case_id"],
+                        "expected": r["expected_action"],
+                        "predicted": r["predicted_action"],
+                    }
+                )
         action_acc = action_correct / total
 
         # --- Amount accuracy ---
@@ -150,23 +158,27 @@ class DecisionEvaluator:
                 if predicted_amt == 0:
                     amount_correct += 1
                 else:
-                    amount_errors.append({
-                        "test_case_id": r["test_case_id"],
-                        "expected": expected_amt,
-                        "predicted": predicted_amt,
-                        "error_pct": 1.0,
-                    })
+                    amount_errors.append(
+                        {
+                            "test_case_id": r["test_case_id"],
+                            "expected": expected_amt,
+                            "predicted": predicted_amt,
+                            "error_pct": 1.0,
+                        }
+                    )
             else:
                 error_pct = abs(predicted_amt - expected_amt) / expected_amt
                 if error_pct <= r["amount_tolerance"]:
                     amount_correct += 1
                 else:
-                    amount_errors.append({
-                        "test_case_id": r["test_case_id"],
-                        "expected": expected_amt,
-                        "predicted": predicted_amt,
-                        "error_pct": round(error_pct, 4),
-                    })
+                    amount_errors.append(
+                        {
+                            "test_case_id": r["test_case_id"],
+                            "expected": expected_amt,
+                            "predicted": predicted_amt,
+                            "error_pct": round(error_pct, 4),
+                        }
+                    )
         amount_acc = amount_correct / total
 
         # --- Approval recall (safety-critical) ---
@@ -174,9 +186,7 @@ class DecisionEvaluator:
         needs_approval = [r for r in results if r["expected_requires_approval"]]
         approval_recall = 1.0
         if needs_approval:
-            approval_correct = sum(
-                1 for r in needs_approval if r["predicted_requires_approval"]
-            )
+            approval_correct = sum(1 for r in needs_approval if r["predicted_requires_approval"])
             approval_recall = approval_correct / len(needs_approval)
 
         # --- Approval precision ---
@@ -184,28 +194,30 @@ class DecisionEvaluator:
         flagged = [r for r in results if r["predicted_requires_approval"]]
         approval_precision = 1.0
         if flagged:
-            flagged_correct = sum(
-                1 for r in flagged if r["expected_requires_approval"]
-            )
+            flagged_correct = sum(1 for r in flagged if r["expected_requires_approval"])
             approval_precision = flagged_correct / len(flagged)
 
         # Approval errors (false positives + false negatives)
         approval_errors: list[dict[str, Any]] = []
         for r in results:
             if r["predicted_requires_approval"] != r["expected_requires_approval"]:
-                approval_errors.append({
-                    "test_case_id": r["test_case_id"],
-                    "expected": r["expected_requires_approval"],
-                    "predicted": r["predicted_requires_approval"],
-                    "type": "false_negative" if r["expected_requires_approval"] else "false_positive",
-                })
+                approval_errors.append(
+                    {
+                        "test_case_id": r["test_case_id"],
+                        "expected": r["expected_requires_approval"],
+                        "predicted": r["predicted_requires_approval"],
+                        "type": "false_negative"
+                        if r["expected_requires_approval"]
+                        else "false_positive",
+                    }
+                )
 
         # --- Weighted composite score ---
         weighted = (
-            self.WEIGHT_ACTION * action_acc +
-            self.WEIGHT_AMOUNT * amount_acc +
-            self.WEIGHT_APPROVAL_RECALL * approval_recall +
-            self.WEIGHT_APPROVAL_PRECISION * approval_precision
+            self.WEIGHT_ACTION * action_acc
+            + self.WEIGHT_AMOUNT * amount_acc
+            + self.WEIGHT_APPROVAL_RECALL * approval_recall
+            + self.WEIGHT_APPROVAL_PRECISION * approval_precision
         )
 
         avg_latency = total_time_ms / total
@@ -235,18 +247,20 @@ def load_decision_cases(path: Path | str | None = None) -> list[DecisionTestCase
     if path is None:
         path = Path(__file__).parent / "data" / "decision_test_set.json"
 
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         data = json.load(f)
 
     cases: list[DecisionTestCase] = []
     for item in data:
-        cases.append(DecisionTestCase(
-            id=item["id"],
-            input_state=item["input_state"],
-            expected_action=item["expected_action"],
-            expected_requires_approval=item["expected_requires_approval"],
-            expected_refund_amount=item.get("expected_refund_amount"),
-            amount_tolerance=item.get("amount_tolerance", 0.05),
-            explanation_contains=item.get("explanation_contains", []),
-        ))
+        cases.append(
+            DecisionTestCase(
+                id=item["id"],
+                input_state=item["input_state"],
+                expected_action=item["expected_action"],
+                expected_requires_approval=item["expected_requires_approval"],
+                expected_refund_amount=item.get("expected_refund_amount"),
+                amount_tolerance=item.get("amount_tolerance", 0.05),
+                explanation_contains=item.get("explanation_contains", []),
+            )
+        )
     return cases

@@ -6,6 +6,7 @@ Uses the incoming header if present, otherwise generates a UUID.
 """
 
 import uuid
+from collections.abc import Awaitable, Callable
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -19,7 +20,9 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
     and LLM call records for end-to-end traceability.
     """
 
-    async def dispatch(self, request: Request, call_next) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         # Use incoming request ID or generate one
         request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
         request.state.request_id = request_id

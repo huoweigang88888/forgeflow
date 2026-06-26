@@ -3,9 +3,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Clock, Inbox, TrendingUp } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 
 import { StatsCard } from "@/components/dashboard/stats-card";
-import { getDashboardStats, listTickets } from "@/lib/tickets";
+import { TrendLineChart } from "@/components/dashboard/trend-line-chart";
+import { LLMCostChart } from "@/components/dashboard/llm-cost-chart";
+import { ProcessingRateChart } from "@/components/dashboard/processing-rate-chart";
+import { getDashboardStats, getTicketMetrics, listTickets } from "@/lib/tickets";
 import type { TicketListItem, TicketStatus } from "@/types";
 
 const STATUS_COLORS: Record<TicketStatus, string> = {
@@ -27,10 +31,18 @@ const STATUS_LABELS: Record<TicketStatus, string> = {
 };
 
 export default function DashboardPage() {
+	const [trendDays, setTrendDays] = useState(30);
+
 	const { data: stats, isLoading: statsLoading } = useQuery({
 		queryKey: ["dashboard-stats"],
 		queryFn: getDashboardStats,
 		refetchInterval: 30_000,
+	});
+
+	const { data: metrics, isLoading: metricsLoading } = useQuery({
+		queryKey: ["dashboard-metrics", trendDays],
+		queryFn: () => getTicketMetrics(trendDays),
+		refetchInterval: 60_000,
 	});
 
 	const { data: recent, isLoading: recentLoading } = useQuery({
@@ -93,6 +105,25 @@ export default function DashboardPage() {
 				/>
 			</div>
 
+			{/* SLA Compliance Card */}
+			{metrics && (
+				<div className="bg-white rounded-xl border border-slate-200 p-5 mb-8">
+					<div className="flex items-center justify-between">
+						<div>
+							<h3 className="text-sm font-semibold text-slate-700">
+								SLA Compliance Rate
+							</h3>
+							<p className="text-xs text-slate-400 mt-0.5">
+								% of resolved tickets within SLA deadline
+							</p>
+						</div>
+						<span className="text-2xl font-bold text-brand-600">
+							{metrics.sla_compliance_rate}%
+						</span>
+					</div>
+				</div>
+			)}
+
 			{/* Resolution Rate Bar */}
 			{stats && stats.total_tickets > 0 && (
 				<div className="bg-white rounded-xl border border-slate-200 p-5 mb-8">
@@ -120,6 +151,27 @@ export default function DashboardPage() {
 					</div>
 				</div>
 			)}
+
+			{/* Charts Row 1 — Processing Rate + LLM Cost */}
+			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+				<div className="lg:col-span-1">
+					<ProcessingRateChart
+						data={metrics?.processing_rate ?? []}
+					/>
+				</div>
+				<div className="lg:col-span-2">
+					<LLMCostChart data={metrics?.llm_cost_daily ?? []} />
+				</div>
+			</div>
+
+			{/* Charts Row 2 — Auto-Resolve Trend */}
+			<div className="mb-8">
+				<TrendLineChart
+					data={metrics?.auto_resolve_trend ?? []}
+					days={trendDays}
+					onDaysChange={setTrendDays}
+				/>
+			</div>
 
 			{/* Recent Tickets */}
 			<div className="bg-white rounded-xl border border-slate-200">

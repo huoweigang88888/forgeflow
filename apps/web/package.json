@@ -14,6 +14,9 @@
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage",
+		"test:e2e": "playwright test",
+		"test:e2e:ui": "playwright test --ui",
+		"test:e2e:report": "playwright show-report",
 		"clean": "rm -rf .next out"
 	},
 	"dependencies": {
@@ -24,11 +27,13 @@
 		"next": "^14.2.15",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",
+		"recharts": "^3.8.1",
 		"tailwind-merge": "^2.5.2",
 		"zustand": "^4.5.5"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.2",
+		"@playwright/test": "^1.61.0",
 		"@testing-library/jest-dom": "^6.9.1",
 		"@testing-library/react": "^16.3.2",
 		"@testing-library/user-event": "^14.6.1",

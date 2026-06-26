@@ -1,14 +1,25 @@
 "use client";
 
-import { AlertTriangle, Check, X } from "lucide-react";
-import { useState } from "react";
 import type { PendingApproval } from "@/types";
+import { AlertTriangle, Check, Clock, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface ApprovalPanelProps {
 	approval: PendingApproval;
 	onApprove: (note: string) => Promise<void>;
 	onReject: (note: string) => Promise<void>;
 	isSubmitting: boolean;
+}
+
+function formatSlaCountdown(remainingSeconds: number): string {
+	if (remainingSeconds <= 0) return "00:00:00";
+	const h = Math.floor(remainingSeconds / 3600);
+	const m = Math.floor((remainingSeconds % 3600) / 60);
+	const s = remainingSeconds % 60;
+	if (remainingSeconds > 7200) {
+		return `${h}h ${m}m remaining`;
+	}
+	return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
 export function ApprovalPanel({
@@ -21,6 +32,33 @@ export function ApprovalPanel({
 	const [showConfirm, setShowConfirm] = useState<"approve" | "reject" | null>(
 		null,
 	);
+
+	// Client-side countdown from sla_remaining_seconds
+	const [countdown, setCountdown] = useState<number | null>(
+		approval.sla_remaining_seconds ?? null,
+	);
+	const [breached, setBreached] = useState(approval.sla_breached ?? false);
+
+	useEffect(() => {
+		const initial = approval.sla_remaining_seconds;
+		if (initial == null) {
+			setCountdown(null);
+			setBreached(false);
+			return;
+		}
+		let remaining = initial;
+		setCountdown(remaining);
+		setBreached(remaining <= 0);
+
+		const interval = setInterval(() => {
+			remaining = Math.max(0, remaining - 1);
+			setCountdown(remaining);
+			setBreached(remaining <= 0);
+			if (remaining <= 0) clearInterval(interval);
+		}, 1000);
+
+		return () => clearInterval(interval);
+	}, [approval.sla_remaining_seconds, approval.sla_breached]);
 
 	const handleConfirm = async () => {
 		if (!showConfirm) return;
@@ -47,6 +85,28 @@ export function ApprovalPanel({
 					</p>
 				</div>
 			</div>
+
+			{/* SLA Countdown */}
+			{countdown != null && (
+				<div
+					className={`flex items-center gap-2 mb-4 px-3 py-2 rounded-lg text-sm font-medium ${
+						breached
+							? "bg-red-100 text-red-700"
+							: countdown < 7200
+								? "bg-amber-100 text-amber-700"
+								: "bg-white text-slate-600 border border-slate-200"
+					}`}
+				>
+					<Clock size={16} />
+					{breached ? (
+						<span>SLA Deadline Breached — escalate immediately</span>
+					) : (
+						<span>
+							Time remaining: {formatSlaCountdown(countdown)}
+						</span>
+					)}
+				</div>
+			)}
 
 			{/* Details */}
 			<div className="grid grid-cols-2 gap-3 mb-4 text-sm">

@@ -102,16 +102,16 @@
     status: "resolved"
 
 - id: "golden_006"
-  name: "Non-After-Sales Inquiry — Escalate"
-  description: "Customer asks about restocking, not an after-sales issue. Escalate."
-  tags: [intent:other, escalation]
+  name: "Pre-Sale Restocking Inquiry — Informational Response"
+  description: "Customer asks about restocking, a pre-sale inquiry. Should send informational notification."
+  tags: [intent:pre_sale_inquiry, notification]
   input:
     platform: "mock"
     customer_email: "curious@test.com"
     issue_text: "When will you restock the blue t-shirt?"
     order_id: null
   expected:
-    intent: "other"
-    recommended_action: "escalate_to_human"
+    intent: "pre_sale_inquiry"
+    recommended_action: "send_notification"
     requires_approval: false
-    status: "escalated"
+    status: "resolved"

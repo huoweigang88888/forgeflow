@@ -18,6 +18,25 @@ from forgeflow.providers.registry import ProviderRegistry
 logger = get_logger(component="agent.order_lookup")
 
 
+def _build_provider_kwargs(state: AgentState) -> dict[str, Any]:
+    """Build the kwargs dict for ProviderRegistry.get() from agent state.
+
+    Includes shop_domain and access_token when available so the
+    ShopifyProvider can make authenticated API calls.
+    """
+    kwargs: dict[str, Any] = {}
+    # mock_overrides only applies to MockPlatformProvider
+    if state.get("platform", "mock") == "mock":
+        kwargs["mock_overrides"] = state.get("mock_overrides", {})
+    shop_domain = state.get("shopify_domain", "")
+    access_token = state.get("access_token", "")
+    if shop_domain:
+        kwargs["shop_domain"] = shop_domain
+    if access_token:
+        kwargs["access_token"] = access_token
+    return kwargs
+
+
 async def lookup_order_node(state: AgentState) -> dict[str, Any]:
     """Look up order details from the platform provider.
 
@@ -50,14 +69,13 @@ async def lookup_order_node(state: AgentState) -> dict[str, Any]:
         }
 
     try:
-        provider = ProviderRegistry.get(platform, mock_overrides=state.get("mock_overrides", {}))
+        kwargs = _build_provider_kwargs(state)
+        provider = ProviderRegistry.get(platform, **kwargs)
         order_info = await provider.get_order(order_id)
 
         # Fetch customer history for downstream decision-making
         customer_email = order_info.customer_email or state.get("customer_email", "")
-        customer_history = await provider.get_customer_history(
-            customer_email, order_id=order_id
-        )
+        customer_history = await provider.get_customer_history(customer_email, order_id=order_id)
 
         logger.info(
             "order_lookup_success",

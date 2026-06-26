@@ -1,12 +1,17 @@
 """
 ForgeFlow AI - Security Module.
 
-Data masking utilities for PII protection in logs and LLM inputs.
+Data masking utilities for PII protection in logs and LLM inputs,
+and AES-256-GCM encryption for Shopify OAuth access tokens.
+
 Implements PRD Section 19.2.
 """
 
 import json
 import re
+from typing import Any, ClassVar
+
+from forgeflow.security.encryption import decrypt_token, encrypt_token  # noqa: F401 — re-exports
 
 
 class DataMasker:
@@ -19,9 +24,14 @@ class DataMasker:
     - GDPR export (controlled unmasking)
     """
 
-    SENSITIVE_LOG_FIELDS: set[str] = {
-        "email", "phone", "address", "credit_card",
-        "customer_name", "ip_address", "password",
+    SENSITIVE_LOG_FIELDS: ClassVar[set[str]] = {
+        "email",
+        "phone",
+        "address",
+        "credit_card",
+        "customer_name",
+        "ip_address",
+        "password",
     }
 
     # ------------------------------------------------------------------
@@ -37,10 +47,7 @@ class DataMasker:
         if not email or "@" not in email:
             return "[REDACTED]"
         local, domain = email.split("@", 1)
-        if len(local) <= 2:
-            masked_local = local[0] + "***"
-        else:
-            masked_local = local[0] + "***" + local[-1]
+        masked_local = local[0] + "***" if len(local) <= 2 else local[0] + "***" + local[-1]
         return f"{masked_local}@{domain}"
 
     @staticmethod
@@ -60,7 +67,7 @@ class DataMasker:
     def mask_api_key(key: str) -> str:
         """Mask an API key for safe logging/display.
 
-        sk-9d5d36df937b49faa9f99269f685dbc2 → sk-9d5d...c2
+        sk-xxxx...xxxx → sk-xxxx...xxxx
         sk-ant-api03-xxxxx → sk-ant...xxxx
         """
         if not key or len(key) < 12:
@@ -69,8 +76,8 @@ class DataMasker:
 
     @staticmethod
     def mask_log_data(
-        data: dict, sensitive_fields: set[str] | None = None
-    ) -> dict:
+        data: dict[str, Any], sensitive_fields: set[str] | None = None
+    ) -> dict[str, Any]:
         """Recursively mask sensitive fields in log data.
 
         Args:
@@ -83,7 +90,7 @@ class DataMasker:
         if sensitive_fields is None:
             sensitive_fields = DataMasker.SENSITIVE_LOG_FIELDS
 
-        result: dict = {}
+        result: dict[str, Any] = {}
         for key, value in data.items():
             if key in sensitive_fields:
                 if "email" in key:
@@ -96,9 +103,7 @@ class DataMasker:
                 result[key] = DataMasker.mask_log_data(value, sensitive_fields)
             elif isinstance(value, list):
                 result[key] = [
-                    DataMasker.mask_log_data(v, sensitive_fields)
-                    if isinstance(v, dict)
-                    else v
+                    DataMasker.mask_log_data(v, sensitive_fields) if isinstance(v, dict) else v
                     for v in value
                 ]
             else:
@@ -106,7 +111,7 @@ class DataMasker:
         return result
 
     @staticmethod
-    def redact_for_llm(data: dict) -> dict:
+    def redact_for_llm(data: dict[str, Any]) -> dict[str, Any]:
         """Remove/minimize sensitive data before sending to LLM.
 
         LLMs don't need full PII to make decisions. We strip:
@@ -121,7 +126,7 @@ class DataMasker:
         Returns:
             A copy with sensitive data minimized.
         """
-        safe = json.loads(json.dumps(data))  # Deep copy
+        safe: dict[str, Any] = json.loads(json.dumps(data))  # Deep copy
 
         # Remove fields LLM never needs
         safe.pop("phone", None)

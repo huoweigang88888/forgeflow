@@ -14,7 +14,7 @@ Design principles:
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, ClassVar
 
 
 @dataclass
@@ -27,13 +27,15 @@ class LLMCallResult:
     """
 
     success: bool
-    data: dict | None = None
+    data: dict[str, Any] | None = None
     raw_response: str | None = None
     fallback_used: bool = False
     fallback_reason: str | None = None
     retry_count: int = 0
     latency_ms: int = 0
     tokens_used: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
     cost: float = 0.0
 
 
@@ -88,7 +90,7 @@ class LLMProvider(ABC):
     async def complete_structured(
         self,
         prompt: str,
-        output_schema: dict,
+        output_schema: dict[str, Any],
         **kwargs: Any,
     ) -> LLMCallResult:
         """Send a prompt and return structured (JSON) output.
@@ -135,7 +137,7 @@ class LLMFactory:
         result = await provider.complete_structured(prompt, schema)
     """
 
-    _registry: dict[str, type[LLMProvider]] = {}
+    _registry: ClassVar[dict[str, type[LLMProvider]]] = {}
 
     @classmethod
     def register(cls, name: str, provider_cls: type[LLMProvider]) -> None:
@@ -171,9 +173,7 @@ class LLMFactory:
         """
         if provider not in cls._registry:
             available = list(cls._registry.keys())
-            raise ValueError(
-                f"Unknown provider '{provider}'. Available: {available}"
-            )
+            raise ValueError(f"Unknown provider '{provider}'. Available: {available}")
         return cls._registry[provider](model=model, **kwargs)
 
     @classmethod

@@ -13,6 +13,8 @@ import {
 import { useState } from "react";
 
 import { PolicyCard } from "@/components/knowledge-base/policy-card";
+import { FileUploadModal } from "@/components/knowledge-base/file-upload-modal";
+import { SearchConsole } from "@/components/knowledge-base/search-console";
 import {
 	createPolicy,
 	deletePolicy,
@@ -44,6 +46,8 @@ export default function KnowledgeBasePage() {
 	} = useKnowledgeBaseStore();
 
 	const [deletingId, setDeletingId] = useState<string | null>(null);
+	const [showSearchConsole, setShowSearchConsole] = useState(false);
+	const [uploadTab, setUploadTab] = useState<"text" | "file">("text");
 
 	// ── List policies ──
 	const {
@@ -160,6 +164,14 @@ export default function KnowledgeBasePage() {
 				</div>
 			</div>
 
+			{/* Search Console (Debug) */}
+			<div className="mb-6">
+				<SearchConsole
+					isOpen={showSearchConsole}
+					onToggle={() => setShowSearchConsole(!showSearchConsole)}
+				/>
+			</div>
+
 			{/* Loading */}
 			{(isLoading || isSearching) && (
 				<div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
@@ -253,12 +265,22 @@ export default function KnowledgeBasePage() {
 			)}
 
 			{/* Upload Modal */}
-			{isUploadOpen && (
+			{isUploadOpen && uploadTab === "text" && (
 				<UploadModal
 					onClose={() => setUploadOpen(false)}
 					onCreated={() => {
 						setUploadOpen(false);
 						queryClient.invalidateQueries({ queryKey: ["policies"] });
+					}}
+					onSwitchToFile={() => setUploadTab("file")}
+				/>
+			)}
+			{isUploadOpen && uploadTab === "file" && (
+				<FileUploadModal
+					isOpen={isUploadOpen}
+					onClose={() => {
+						setUploadOpen(false);
+						setUploadTab("text");
 					}}
 				/>
 			)}
@@ -271,9 +293,11 @@ export default function KnowledgeBasePage() {
 function UploadModal({
 	onClose,
 	onCreated,
+	onSwitchToFile,
 }: {
 	onClose: () => void;
 	onCreated: () => void;
+	onSwitchToFile: () => void;
 }) {
 	const [title, setTitle] = useState("");
 	const [content, setContent] = useState("");
@@ -313,9 +337,27 @@ function UploadModal({
 		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
 			<div className="bg-white rounded-xl border border-slate-200 w-full max-w-lg mx-4 p-6 shadow-xl">
 				<div className="flex items-center justify-between mb-4">
-					<h2 className="text-lg font-semibold text-slate-900">
-						Upload Policy
-					</h2>
+					<div className="flex items-center gap-3">
+						<h2 className="text-lg font-semibold text-slate-900">
+							Upload Policy
+						</h2>
+						{/* Tab switcher */}
+						<div className="flex gap-1 bg-slate-100 rounded-lg p-0.5">
+							<button
+								type="button"
+								className="px-2.5 py-1 text-xs font-medium rounded-md bg-white text-slate-900 shadow-sm"
+							>
+								Paste Text
+							</button>
+							<button
+								type="button"
+								onClick={onSwitchToFile}
+								className="px-2.5 py-1 text-xs font-medium rounded-md text-slate-500 hover:text-slate-700"
+							>
+								Upload File
+							</button>
+						</div>
+					</div>
 					<button
 						type="button"
 						onClick={onClose}

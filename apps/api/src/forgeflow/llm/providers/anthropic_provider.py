@@ -51,7 +51,7 @@ class AnthropicProvider(LLMProvider):
     async def complete_structured(
         self,
         prompt: str,
-        output_schema: dict,
+        output_schema: dict[str, Any],
         **kwargs: Any,
     ) -> LLMCallResult:
         """Send a prompt expecting structured JSON output.
@@ -84,13 +84,12 @@ class AnthropicProvider(LLMProvider):
             parsed = json.loads(raw)
 
             # Estimate tokens (Anthropic returns input/output tokens)
-            tokens = (
-                response.usage.input_tokens + response.usage.output_tokens
-                if hasattr(response, "usage") else 0
-            )
+            input_toks = response.usage.input_tokens if hasattr(response, "usage") else 0
+            output_toks = response.usage.output_tokens if hasattr(response, "usage") else 0
+            tokens = input_toks + output_toks
             cost = self._estimate_cost(
-                prompt_tokens=response.usage.input_tokens if hasattr(response, "usage") else 0,
-                completion_tokens=response.usage.output_tokens if hasattr(response, "usage") else 0,
+                prompt_tokens=input_toks,
+                completion_tokens=output_toks,
             )
 
             return LLMCallResult(
@@ -99,6 +98,8 @@ class AnthropicProvider(LLMProvider):
                 raw_response=raw,
                 latency_ms=latency_ms,
                 tokens_used=tokens,
+                input_tokens=input_toks,
+                output_tokens=output_toks,
                 cost=cost,
             )
 

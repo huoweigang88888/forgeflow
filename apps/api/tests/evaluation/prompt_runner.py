@@ -10,7 +10,6 @@ Runs prompt templates through mock LLM providers and validates that:
 From PRD Section 18.4: Prompt Regression Testing.
 """
 
-import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -72,7 +71,7 @@ class PromptRegressionRunner:
 
     async def run_all(self) -> PromptRegressionReport:
         """Load test cases and run all validations."""
-        with open(self.test_file, "r", encoding="utf-8") as f:
+        with open(self.test_file, encoding="utf-8") as f:
             data = yaml.safe_load(f)
 
         cases = [
@@ -143,6 +142,7 @@ class PromptRegressionRunner:
         if expected_vars:
             # Simple check: count {var} patterns in template
             import re
+
             actual_vars = set(re.findall(r"\{(\w+)\}", template))
             missing = expected_vars - actual_vars
             if missing:

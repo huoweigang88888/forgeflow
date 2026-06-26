@@ -7,7 +7,8 @@ Every node reads and returns a partial update to this state.
 From PRD Section 7.1: Agent State Definition.
 """
 
-from typing import Literal, TypedDict
+from datetime import datetime
+from typing import Any, Literal, TypedDict
 
 # ── Intent types ──
 IntentType = Literal[
@@ -16,6 +17,9 @@ IntentType = Literal[
     "wrong_item",
     "damaged_item",
     "exchange_request",
+    "partial_refund",
+    "subscription_cancel",
+    "pre_sale_inquiry",
     "other",
 ]
 
@@ -60,6 +64,7 @@ class AgentState(TypedDict, total=False):
     ticket_id: str
     platform: str  # "shopify" | "woocommerce" | "amazon" | "mock"
     shopify_domain: str  # tenant identifier
+    access_token: str | None  # Shopify OAuth access token (decrypted, from DB)
     customer_email: str
     customer_name: str | None
     order_id: str | None  # platform-native order ID
@@ -68,7 +73,7 @@ class AgentState(TypedDict, total=False):
     attachments: list[str]
 
     # === Mock overrides (for testing) ===
-    mock_overrides: dict | None
+    mock_overrides: dict[str, Any] | None
 
     # === Intent Detection ===
     intent: IntentType | None
@@ -78,19 +83,19 @@ class AgentState(TypedDict, total=False):
     sentiment: Sentiment | None
 
     # === Order Lookup ===
-    order_info: dict | None
+    order_info: dict[str, Any] | None
 
     # === Logistics Check ===
-    logistics_status: dict | None
+    logistics_status: dict[str, Any] | None
     tracking_number: str | None
     tracking_carrier: str | None
 
     # === Policy Check ===
-    relevant_policies: list[dict] | None
+    relevant_policies: list[dict[str, Any]] | None
     policy_match: bool | None
 
     # === Customer History ===
-    customer_history: dict | None
+    customer_history: dict[str, Any] | None
 
     # === Decision ===
     recommended_action: ActionType | None
@@ -103,7 +108,7 @@ class AgentState(TypedDict, total=False):
 
     # === Execution ===
     execution_status: ExecutionStatus | None
-    execution_result: dict | None
+    execution_result: dict[str, Any] | None
 
     # === Control ===
     current_step: str
@@ -111,7 +116,7 @@ class AgentState(TypedDict, total=False):
     error_message: str | None
     fallback_used: bool
     started_at: str | None  # ISO 8601
-    completed_at: str | None
+    completed_at: datetime | None
 
     # === Status ===
     status: TicketStatus
@@ -128,7 +133,8 @@ def get_initial_state(
     order_id: str | None = None,
     customer_name: str | None = None,
     attachments: list[str] | None = None,
-    mock_overrides: dict | None = None,
+    mock_overrides: dict[str, Any] | None = None,
+    access_token: str | None = None,
 ) -> AgentState:
     """Build initial state for a new ticket.
 
@@ -142,6 +148,7 @@ def get_initial_state(
         customer_name: Optional customer display name.
         attachments: Optional list of attachment URLs.
         mock_overrides: Optional mock provider overrides (for testing).
+        access_token: Optional Shopify OAuth access token for real API calls.
 
     Returns:
         Initialized AgentState ready for the LangGraph pipeline.
@@ -150,6 +157,7 @@ def get_initial_state(
         ticket_id=ticket_id,
         platform=platform,
         shopify_domain=shopify_domain,
+        access_token=access_token,
         customer_email=customer_email,
         customer_name=customer_name,
         order_id=order_id,

@@ -8,6 +8,7 @@ cannot accidentally mutate provider responses.
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -24,8 +25,8 @@ class OrderInfo:
     financial_status: str
     tracking_number: str | None = None
     tracking_carrier: str | None = None
-    shipping_address: dict = field(default_factory=dict)
-    line_items: list[dict] = field(default_factory=list)
+    shipping_address: dict[str, Any] = field(default_factory=dict)
+    line_items: list[dict[str, Any]] = field(default_factory=list)
     created_at: datetime | None = None
 
 
@@ -35,6 +36,18 @@ class RefundResult:
 
     success: bool
     refund_id: str | None = None
+    amount: float = 0.0
+    error: str | None = None
+
+
+@dataclass(frozen=True)
+class ExchangeResult:
+    """Result of an exchange/return operation."""
+
+    success: bool
+    exchange_id: str | None = None
+    return_label_url: str | None = None
+    replacement_order_id: str | None = None
     amount: float = 0.0
     error: str | None = None
 
@@ -50,4 +63,4 @@ class TrackingInfo:
     estimated_delivery: datetime | None = None
     days_in_transit: int = 0
     last_update: datetime | None = None
-    events: list[dict] = field(default_factory=list)
+    events: list[dict[str, Any]] = field(default_factory=list)

@@ -1,8 +1,8 @@
 "use client";
 
+import type { PolicyDocument } from "@/types";
 import { Trash2 } from "lucide-react";
 import { useState } from "react";
-import type { PolicyDocument } from "@/types";
 
 interface PolicyCardProps {
 	policy: PolicyDocument;

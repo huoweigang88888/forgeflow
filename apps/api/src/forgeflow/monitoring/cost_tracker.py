@@ -15,9 +15,9 @@ Usage:
     status = await tracker.check_budget("mystore.myshopify.com")
 """
 
-import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any
 
 from forgeflow.monitoring.logger import get_logger
 
@@ -116,7 +116,7 @@ class CostTracker:
             is_warning=is_warning,
         )
 
-    async def get_monthly_stats(self, tenant_id: str) -> dict:
+    async def get_monthly_stats(self, tenant_id: str) -> dict[str, Any]:
         """Get monthly usage statistics for a tenant."""
         month_key = self._monthly_key(tenant_id)
 
@@ -133,7 +133,7 @@ class CostTracker:
             "month": datetime.now(UTC).strftime("%Y-%m"),
         }
 
-    async def get_all_tenants_cost(self) -> list[dict]:
+    async def get_all_tenants_cost(self) -> list[dict[str, Any]]:
         """Get cost summary for all tenants (for admin dashboard)."""
         # Scan for all cost keys
         tenants = []
@@ -145,13 +145,15 @@ class CostTracker:
             for key in keys:
                 tenant_id = key.decode().split(":", 2)[-1]
                 status = await self.check_budget(tenant_id)
-                tenants.append({
-                    "tenant_id": tenant_id,
-                    "current_cost": status.current_cost,
-                    "budget_limit": status.budget_limit,
-                    "percentage": status.percentage,
-                    "is_warning": status.is_warning,
-                })
+                tenants.append(
+                    {
+                        "tenant_id": tenant_id,
+                        "current_cost": status.current_cost,
+                        "budget_limit": status.budget_limit,
+                        "percentage": status.percentage,
+                        "is_warning": status.is_warning,
+                    }
+                )
             if cursor == 0:
                 break
 

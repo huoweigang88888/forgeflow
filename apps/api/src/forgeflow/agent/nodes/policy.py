@@ -52,10 +52,11 @@ async def check_policy_node(state: AgentState) -> dict[str, Any]:
     shopify_domain = state.get("shopify_domain", "default")
     fulfillment_status = order_info.get("fulfillment_status", "unknown")
     order_total = float(order_info.get("total_price", 0))
+    intent_str = intent if isinstance(intent, str) else "other"
 
     # ── Tier 1: Hard rules (existing, unchanged) ──
-    hard_matches = _hard_rule_policy_match(intent, fulfillment_status, order_total)
-    if hard_matches and not _should_search_custom_policies(intent):
+    hard_matches = _hard_rule_policy_match(intent_str, fulfillment_status, order_total)
+    if hard_matches and not _should_search_custom_policies(intent_str):
         logger.info(
             "policy_hard_rule_match",
             ticket_id=ticket_id,
@@ -73,7 +74,7 @@ async def check_policy_node(state: AgentState) -> dict[str, Any]:
         custom_matches = await _search_custom_policies(
             issue_text=issue_text,
             shopify_domain=shopify_domain,
-            intent=intent,
+            intent=intent_str,
         )
         if custom_matches:
             logger.info(
@@ -158,33 +159,39 @@ def _hard_rule_policy_match(
 
     # Shipping delay → shipping policy always applies
     if intent == "shipping_delay":
-        matches.append({
-            "policy_id": "default_shipping",
-            "policy_title": "Standard Shipping Policy",
-            "applies": True,
-            "reasoning": "Customer reports shipping delay",
-            "recommended_action": "refund or reship",
-        })
+        matches.append(
+            {
+                "policy_id": "default_shipping",
+                "policy_title": "Standard Shipping Policy",
+                "applies": True,
+                "reasoning": "Customer reports shipping delay",
+                "recommended_action": "refund or reship",
+            }
+        )
 
     # Refund request → refund policy applies
     if intent in ("refund_request", "damaged_item", "wrong_item"):
-        matches.append({
-            "policy_id": "default_refund",
-            "policy_title": "Standard Refund Policy",
-            "applies": True,
-            "reasoning": f"Customer requesting refund for {intent}",
-            "recommended_action": "refund",
-        })
+        matches.append(
+            {
+                "policy_id": "default_refund",
+                "policy_title": "Standard Refund Policy",
+                "applies": True,
+                "reasoning": f"Customer requesting refund for {intent}",
+                "recommended_action": "refund",
+            }
+        )
 
     # Exchange → exchange policy applies
     if intent == "exchange_request":
-        matches.append({
-            "policy_id": "default_exchange",
-            "policy_title": "Exchange Policy",
-            "applies": True,
-            "reasoning": "Customer requesting exchange",
-            "recommended_action": "exchange",
-        })
+        matches.append(
+            {
+                "policy_id": "default_exchange",
+                "policy_title": "Exchange Policy",
+                "applies": True,
+                "reasoning": "Customer requesting exchange",
+                "recommended_action": "exchange",
+            }
+        )
 
     return matches if matches else None
 
@@ -196,8 +203,7 @@ def _should_search_custom_policies(intent: str) -> bool:
     suffice. For complex or ambiguous cases, search custom policies.
     """
     # Always search for these — merchants often have custom rules
-    return intent in ("other", "damaged_item", "wrong_item", "exchange_request",
-                      "refund_request")
+    return intent in ("other", "damaged_item", "wrong_item", "exchange_request", "refund_request")
 
 
 # ── Tier 2: pgvector Semantic Search ──
@@ -253,14 +259,16 @@ async def _search_custom_policies(
             results: list[dict[str, Any]] = []
             for hit in hits:
                 policy = hit["policy"]
-                results.append({
-                    "policy_id": str(policy.id),
-                    "policy_title": policy.title,
-                    "content": policy.content,
-                    "category": policy.category,
-                    "similarity": hit["similarity"],
-                    "source": "custom",
-                })
+                results.append(
+                    {
+                        "policy_id": str(policy.id),
+                        "policy_title": policy.title,
+                        "content": policy.content,
+                        "category": policy.category,
+                        "similarity": hit["similarity"],
+                        "source": "custom",
+                    }
+                )
             return results
     except Exception:
         logger.warning("custom_policy_db_unavailable")
@@ -301,14 +309,16 @@ def _build_policy_context(
 
     # Custom policies first (higher priority)
     for cm in custom_matches:
-        all_policies.append({
-            "policy_id": cm["policy_id"],
-            "policy_title": cm["policy_title"],
-            "content": cm["content"][:1000],  # Truncate for LLM context window
-            "category": cm.get("category"),
-            "source": "custom",
-            "similarity": cm.get("similarity"),
-        })
+        all_policies.append(
+            {
+                "policy_id": cm["policy_id"],
+                "policy_title": cm["policy_title"],
+                "content": cm["content"][:1000],  # Truncate for LLM context window
+                "category": cm.get("category"),
+                "source": "custom",
+                "similarity": cm.get("similarity"),
+            }
+        )
 
     # DEFAULT_POLICIES as fallback
     all_policies.extend(DEFAULT_POLICIES)
@@ -326,9 +336,7 @@ def _merge_custom_into_matches(
     or title, attach the similarity score and source='custom' flag.
     """
     custom_by_id = {cm["policy_id"]: cm for cm in custom_matches}
-    custom_by_title = {
-        cm["policy_title"].lower(): cm for cm in custom_matches
-    }
+    custom_by_title = {cm["policy_title"].lower(): cm for cm in custom_matches}
 
     for match in llm_matches:
         pid = match.get("policy_id", "")

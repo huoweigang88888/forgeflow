@@ -11,9 +11,10 @@ Usage in tests:
 """
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from forgeflow.providers.base import PlatformProvider
-from forgeflow.providers.dto import OrderInfo, RefundResult, TrackingInfo
+from forgeflow.providers.dto import ExchangeResult, OrderInfo, RefundResult, TrackingInfo
 
 
 class MockPlatformProvider(PlatformProvider):
@@ -42,39 +43,58 @@ class MockPlatformProvider(PlatformProvider):
     # =========================================================================
 
     async def get_order(self, order_id: str) -> OrderInfo:
-        """Return a mock order with realistic data, respecting overrides."""
+        """Return a mock order with realistic data, respecting overrides.
+
+        Derives order properties from order_id suffix for E2E tests:
+        - order_XXXX where XXXX is the dollar amount in the test scenario
+        - Falls back to the override or a default of 45.60.
+        """
         order_override = self._overrides.get("order", {})
         customer_override = self._overrides.get("customer_history", {})
+
+        # Try to extract a price hint from the order_id suffix.
+        # 4-digit suffixes (e.g. order_9999) are treated as cents: 9999 → 99.99
+        try:
+            suffix = order_id.rsplit("_", 1)[-1]
+            derived_price = float(suffix)
+            if 100 <= derived_price <= 9999:
+                derived_price = derived_price / 100.0  # cents → dollars
+            elif derived_price <= 0 or derived_price > 10000:
+                derived_price = 45.60
+        except (ValueError, IndexError):
+            derived_price = 45.60
+
         return OrderInfo(
             order_id=order_id,
             order_number=f"#{order_id[-5:]}",
             customer_email=customer_override.get("email", "customer@example.com"),
             customer_name=customer_override.get("name", "John Doe"),
-            total_price=order_override.get("total_price", 45.60),
+            total_price=order_override.get("total_price", derived_price),
             currency=order_override.get("currency", "USD"),
             fulfillment_status=order_override.get("fulfillment_status", "fulfilled"),
             financial_status=order_override.get("financial_status", "paid"),
             tracking_number=order_override.get("tracking_number", "TRACK123456789"),
             tracking_carrier=order_override.get("tracking_carrier", "UPS"),
-            shipping_address=order_override.get("shipping_address", {
-                "city": "New York",
-                "zip": "10001",
-                "country": "US",
-            }),
-            line_items=order_override.get("line_items", [
-                {"title": "Test Product", "quantity": 1, "price": 45.60},
-            ]),
+            shipping_address=order_override.get(
+                "shipping_address",
+                {
+                    "city": "New York",
+                    "zip": "10001",
+                    "country": "US",
+                },
+            ),
+            line_items=order_override.get(
+                "line_items",
+                [
+                    {"title": "Test Product", "quantity": 1, "price": derived_price},
+                ],
+            ),
             created_at=datetime.now(UTC) - timedelta(days=5),
         )
 
-    async def get_customer_orders(
-        self, customer_id: str, limit: int = 10
-    ) -> list[OrderInfo]:
+    async def get_customer_orders(self, customer_id: str, limit: int = 10) -> list[OrderInfo]:
         """Return mock customer order history."""
-        return [
-            await self.get_order(f"order_{i:03d}")
-            for i in range(min(limit, 3))
-        ]
+        return [await self.get_order(f"order_{i:03d}") for i in range(min(limit, 3))]
 
     async def create_refund(
         self,
@@ -90,13 +110,29 @@ class MockPlatformProvider(PlatformProvider):
             amount=amount,
         )
 
+    async def create_exchange(
+        self,
+        order_id: str,
+        reason: str,
+        exchange_items: list[dict[str, Any]] | None = None,
+        notify_customer: bool = True,
+    ) -> ExchangeResult:
+        """Return a successful mock exchange."""
+        return ExchangeResult(
+            success=True,
+            exchange_id=f"exchange_{order_id}",
+            return_label_url="https://returns.example.com/label/mock123",
+            replacement_order_id=f"order_replacement_{order_id[-6:]}",
+            amount=0.0,
+        )
+
     async def get_fulfillment_status(self, order_id: str) -> str:
         """Return mock fulfillment status."""
         return "fulfilled"
 
     async def get_customer_history(
         self, customer_email: str, order_id: str | None = None
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Return mock customer history, respecting overrides."""
         hist_override = self._overrides.get("customer_history", {})
         return {
@@ -119,7 +155,7 @@ class MockPlatformProvider(PlatformProvider):
         """Return mock tracking info, respecting overrides."""
         logistics_override = self._overrides.get("logistics", {})
         now = datetime.now(UTC)
-        status = logistics_override.get("status", "in_transit")
+        status = logistics_override.get("status", "delayed")
         days = logistics_override.get("days_in_transit", 2)
         return TrackingInfo(
             tracking_number=tracking_number,

@@ -53,7 +53,7 @@ class DeepSeekProvider(OpenAIProvider):
     async def complete_structured(
         self,
         prompt: str,
-        output_schema: dict,
+        output_schema: dict[str, Any],
         *,
         temperature: float = 0.0,
         max_tokens: int = 2000,
@@ -107,9 +107,11 @@ class DeepSeekProvider(OpenAIProvider):
 
             usage = response.usage
             tokens = usage.total_tokens if usage else 0
+            input_toks = usage.prompt_tokens if usage else 0
+            output_toks = usage.completion_tokens if usage else 0
             cost = self._estimate_cost(
-                prompt_tokens=usage.prompt_tokens if usage else 0,
-                completion_tokens=usage.completion_tokens if usage else 0,
+                prompt_tokens=input_toks,
+                completion_tokens=output_toks,
             )
 
             return LLMCallResult(
@@ -118,6 +120,8 @@ class DeepSeekProvider(OpenAIProvider):
                 raw_response=raw,
                 latency_ms=latency_ms,
                 tokens_used=tokens,
+                input_tokens=input_toks,
+                output_tokens=output_toks,
                 cost=cost,
             )
 

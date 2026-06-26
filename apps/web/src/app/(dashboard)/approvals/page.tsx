@@ -1,12 +1,12 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2 } from "lucide-react";
-import { useState } from "react";
 import { ApprovalCard } from "@/components/approvals/approval-card";
 import { useApprovalStore } from "@/lib/store";
 import { approveTicket, listTickets, rejectTicket } from "@/lib/tickets";
 import type { TicketListItem } from "@/types";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { CheckCircle2 } from "lucide-react";
+import { useState } from "react";
 
 export default function ApprovalsPage() {
 	const queryClient = useQueryClient();

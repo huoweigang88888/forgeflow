@@ -15,8 +15,14 @@ import sys
 from pathlib import Path
 
 REQUIRED_PASS_RATE = 1.0  # 30/30 must pass
-REQUIRED_PASS_COUNT = 30   # Exact golden case count expected
-REPORT_PATH = Path(__file__).resolve().parent.parent / "tests" / "evaluation" / "golden" / "golden_results.json"
+REQUIRED_PASS_COUNT = 30  # Exact golden case count expected
+REPORT_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "tests"
+    / "evaluation"
+    / "golden"
+    / "golden_results.json"
+)
 
 
 def main() -> int:
@@ -25,12 +31,12 @@ def main() -> int:
         print("Run golden tests first: pytest tests/evaluation/golden/runner.py -v")
         return 1
 
-    with open(REPORT_PATH, "r", encoding="utf-8") as f:
+    with open(REPORT_PATH, encoding="utf-8") as f:
         report = json.load(f)
 
     total = report.get("total", 0)
     passed = report.get("passed", 0)
-    failed = report.get("failed", 0)
+    _ = report.get("failed", 0)  # Tracked but not used for threshold decision
     pass_rate = report.get("pass_rate", 0)
 
     print(f"Golden Tests: {passed}/{total} passed ({pass_rate:.1%})")

@@ -39,7 +39,7 @@ llm_call_duration_seconds = Histogram(
 llm_tokens_total = Counter(
     "forgeflow_llm_tokens_total",
     "Total tokens consumed",
-    ["provider", "model", "type"],  # type: input or output
+    ["provider", "model", "type"],  # "type" dimension: input or output
 )
 
 llm_cost_total = Counter(

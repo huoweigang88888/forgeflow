@@ -5,7 +5,6 @@ Pydantic models for ticket API request/response validation.
 Matches the API design from PRD Section 9.
 """
 
-
 from pydantic import BaseModel, Field
 
 # ── Request Schemas ──
@@ -89,6 +88,10 @@ class PendingApprovalInfo(BaseModel):
     reason: str = Field(default="", description="Reason for the proposed action")
     decision_explanation: str = Field(default="", description="Agent's reasoning")
     deadline: str | None = Field(default=None, description="ISO 8601 deadline for approval")
+    sla_remaining_seconds: int | None = Field(
+        default=None, description="Seconds remaining until SLA breach"
+    )
+    sla_breached: bool = Field(default=False, description="True if SLA deadline has passed")
 
 
 class TicketCreateResponse(BaseModel):

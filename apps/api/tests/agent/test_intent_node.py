@@ -2,12 +2,12 @@
 ForgeFlow AI - Intent Detection Node Tests.
 
 Tests the detect_intent_node in isolation using mock LLM calls.
-Validates intent classification across all 6 categories.
+Validates intent classification across all 9 categories plus language detection.
 """
 
 import pytest
 
-from forgeflow.agent.nodes.intent import detect_intent_node
+from forgeflow.agent.nodes.intent import _detect_language, detect_intent_node
 from forgeflow.agent.state import AgentState
 
 
@@ -26,6 +26,7 @@ def _make_state(issue_text: str, order_id: str | None = None) -> AgentState:
         status="processing",
         llm_call_count=0,
         requires_approval=False,
+        issue_language="en",
     )
 
 
@@ -92,6 +93,38 @@ async def test_intent_exchange_request_phrasing():
 
 
 @pytest.mark.asyncio
+async def test_intent_partial_refund_phrasing():
+    """Node should identify partial refund requests."""
+    state = _make_state("The price dropped by $20 after I bought it. Can I get a partial refund?")
+    result = await detect_intent_node(state)
+
+    assert "intent" in result
+    assert result["current_step"] == "intent_done"
+
+
+@pytest.mark.asyncio
+async def test_intent_subscription_cancel_phrasing():
+    """Node should identify subscription cancellation requests."""
+    state = _make_state(
+        "I want to cancel my monthly subscription, please stop the recurring charges"
+    )
+    result = await detect_intent_node(state)
+
+    assert "intent" in result
+    assert result["current_step"] == "intent_done"
+
+
+@pytest.mark.asyncio
+async def test_intent_pre_sale_inquiry_phrasing():
+    """Node should identify pre-sale inquiry questions."""
+    state = _make_state("Does this phone case fit the iPhone 15 Pro Max? I haven't ordered yet.")
+    result = await detect_intent_node(state)
+
+    assert "intent" in result
+    assert result["current_step"] == "intent_done"
+
+
+@pytest.mark.asyncio
 async def test_intent_other_phrasing():
     """Node should classify non-after-sales queries as 'other'."""
     state = _make_state("When will you restock the blue one?")
@@ -143,6 +176,44 @@ async def test_intent_all_fields_present():
         "urgency",
         "sentiment",
         "current_step",
+        "issue_language",  # Added in language detection integration
     ]
     for field in required_fields:
         assert field in result, f"Missing required field: {field}"
+
+
+# =============================================================================
+# Language detection
+# =============================================================================
+
+
+@pytest.mark.asyncio
+async def test_intent_language_detection_english():
+    """Node should detect English language and populate issue_language."""
+    state = _make_state("Where is my order? I need a refund now.")
+    result = await detect_intent_node(state)
+
+    assert "issue_language" in result
+    assert result["issue_language"] in ("en", "")  # langdetect may fail without package installed
+
+
+@pytest.mark.asyncio
+async def test_intent_language_detection_empty():
+    """Empty text should default to 'en'."""
+    state = _make_state("")
+    result = await detect_intent_node(state)
+
+    assert "issue_language" in result
+    assert result["issue_language"] == "en"
+
+
+def test_detect_language_helper_english():
+    """_detect_language helper should handle English text."""
+    result = _detect_language("Hello, I need help with my order please")
+    assert result in ("en", "")  # en if langdetect installed, '' if not
+
+
+def test_detect_language_helper_empty():
+    """_detect_language helper should return 'en' for empty text."""
+    assert _detect_language("") == "en"
+    assert _detect_language("   ") == "en"

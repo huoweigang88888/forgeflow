@@ -75,4 +75,10 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(minute="*/5"),
         "options": {"expires": 240},
     },
+    # SLA breach check: every 15 minutes
+    "check-sla-breaches": {
+        "task": "forgeflow.worker.tasks.check_sla_breaches",
+        "schedule": crontab(minute="*/15"),
+        "options": {"expires": 840},  # 14 min
+    },
 }

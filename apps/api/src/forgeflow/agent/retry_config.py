@@ -94,9 +94,7 @@ NODE_RETRY_CONFIGS: dict[str, NodeRetryConfig] = {
         retry_backoff_seconds=[2, 4, 8],
         fallback_value={
             "execution_status": "pending_manual",
-            "execution_result": {
-                "error": "Execution failed, requires manual intervention"
-            },
+            "execution_result": {"error": "Execution failed, requires manual intervention"},
         },
     ),
 }

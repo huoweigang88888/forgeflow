@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import re
 from collections.abc import Sequence
+from typing import Any
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -175,9 +176,7 @@ async def create_policy_with_chunks(
 
 async def get_policy(db: AsyncSession, policy_id: str) -> PolicyDocument | None:
     """Get a single policy document by ID."""
-    result = await db.execute(
-        select(PolicyDocument).where(PolicyDocument.id == policy_id)
-    )
+    result = await db.execute(select(PolicyDocument).where(PolicyDocument.id == policy_id))
     return result.scalar_one_or_none()
 
 
@@ -195,7 +194,7 @@ async def list_policies(
     Returns:
         Tuple of (policies, total_count).
     """
-    conditions: list = [PolicyDocument.shopify_domain == shopify_domain]
+    conditions: list[Any] = [PolicyDocument.shopify_domain == shopify_domain]
     if category:
         conditions.append(PolicyDocument.category == category)
     if is_active is not None:
@@ -220,9 +219,7 @@ async def list_policies(
     return policies, total
 
 
-async def update_policy(
-    db: AsyncSession, policy_id: str, **kwargs
-) -> PolicyDocument | None:
+async def update_policy(db: AsyncSession, policy_id: str, **kwargs: Any) -> PolicyDocument | None:
     """Update policy fields. Only non-None kwargs are applied.
 
     Returns updated policy or None if not found.
@@ -258,9 +255,7 @@ async def delete_policy(db: AsyncSession, policy_id: str) -> bool:
     return True
 
 
-async def set_embedding(
-    db: AsyncSession, policy: PolicyDocument, embedding: list[float]
-) -> None:
+async def set_embedding(db: AsyncSession, policy: PolicyDocument, embedding: list[float]) -> None:
     """Set the embedding vector on a policy document.
 
     Does NOT commit — caller is responsible for the transaction.
@@ -280,7 +275,7 @@ async def search_by_vector(
     category: str | None = None,
     limit: int = 5,
     threshold: float = 0.7,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Search for policy documents by embedding similarity.
 
     Uses pgvector cosine distance (<=> operator). Similarity = 1 - distance.
@@ -298,11 +293,9 @@ async def search_by_vector(
     """
     # pgvector comparator: .cosine_distance() maps to <=> operator (range 0-2)
     # similarity = 1 - cosine_distance
-    similarity_expr = 1.0 - PolicyDocument.embedding.cosine_distance(
-        query_embedding
-    )
+    similarity_expr = 1.0 - PolicyDocument.embedding.cosine_distance(query_embedding)
 
-    conditions: list = [
+    conditions: list[Any] = [
         PolicyDocument.shopify_domain == shopify_domain,
         PolicyDocument.embedding.is_not(None),
         PolicyDocument.is_active,
@@ -320,7 +313,7 @@ async def search_by_vector(
     result = await db.execute(stmt)
     rows = result.all()
 
-    hits: list[dict] = []
+    hits: list[dict[str, Any]] = []
     for policy, similarity in rows:
         if similarity >= threshold:
             hits.append({"policy": policy, "similarity": round(float(similarity), 4)})
@@ -338,7 +331,7 @@ async def hybrid_search(
     keyword_weight: float = 0.3,
     limit: int = 10,
     threshold: float = 0.1,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Hybrid search: combines pgvector similarity with full-text keyword relevance.
 
     Calls the PostgreSQL hybrid_search() SQL function via raw SQL.
@@ -388,19 +381,127 @@ async def hybrid_search(
     )
     rows = result.mappings().all()
 
-    hits: list[dict] = []
+    hits: list[dict[str, Any]] = []
     for row in rows:
-        hits.append({
-            "policy_id": str(row["id"]),
-            "title": row["title"],
-            "content": row["content"],
-            "category": row["category"],
-            "tags": row["tags"],
-            "chunk_index": row["chunk_index"],
-            "source_document_id": row["source_document_id"],
-            "similarity": row["similarity"],
-            "text_relevance": row["text_relevance"],
-            "hybrid_score": row["hybrid_score"],
-        })
+        hits.append(
+            {
+                "policy_id": str(row["id"]),
+                "title": row["title"],
+                "content": row["content"],
+                "category": row["category"],
+                "tags": row["tags"],
+                "chunk_index": row["chunk_index"],
+                "source_document_id": row["source_document_id"],
+                "similarity": row["similarity"],
+                "text_relevance": row["text_relevance"],
+                "hybrid_score": row["hybrid_score"],
+            }
+        )
 
     return hits
+
+
+# ── Text Search (PostgreSQL Full-Text) ──
+
+
+async def search_by_text(
+    db: AsyncSession,
+    *,
+    query_text: str,
+    shopify_domain: str = "default",
+    category: str | None = None,
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    """Search policy documents using PostgreSQL full-text search.
+
+    Uses ts_rank on a tsvector built from title and content.
+
+    Args:
+        db: Async database session.
+        query_text: The raw text query.
+        shopify_domain: Tenant filter.
+        category: Optional category filter.
+        limit: Max results to return.
+
+    Returns:
+        List of dicts with policy fields and a "rank" score.
+    """
+    from sqlalchemy import and_
+
+    # Build ts_query from plain text
+    ts_query = func.plainto_tsquery("english", query_text)
+    ts_vector = func.setweight(func.to_tsvector("english", PolicyDocument.title), "A").op("||")(
+        func.setweight(func.to_tsvector("english", PolicyDocument.content), "B")
+    )
+    rank_expr = func.ts_rank(ts_vector, ts_query, 32).label("rank")  # 32 = normalization bit
+
+    conditions: list[Any] = [
+        PolicyDocument.shopify_domain == shopify_domain,
+        PolicyDocument.is_active,
+        ts_vector.op("@@")(ts_query),
+    ]
+    if category:
+        conditions.append(PolicyDocument.category == category)
+
+    stmt = (
+        select(PolicyDocument, rank_expr)
+        .where(and_(*conditions))
+        .order_by(rank_expr.desc())
+        .limit(limit)
+    )
+
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    hits: list[dict[str, Any]] = []
+    for policy, rank_val in rows:
+        hits.append(
+            {
+                "policy": policy,
+                "rank": round(float(rank_val), 4),
+            }
+        )
+
+    return hits
+
+
+# ── Chunk Retrieval ──
+
+
+async def get_chunks_by_source_document(
+    db: AsyncSession,
+    source_document_id: str,
+) -> list[dict[str, Any]]:
+    """Retrieve all chunks for a source document ordered by chunk_index.
+
+    Args:
+        db: Async database session.
+        source_document_id: The source_document_id shared by all chunks.
+
+    Returns:
+        List of dicts with chunk metadata.
+    """
+    stmt = (
+        select(PolicyDocument)
+        .where(
+            and_(
+                PolicyDocument.source_document_id == source_document_id,
+                PolicyDocument.is_active,
+            )
+        )
+        .order_by(PolicyDocument.chunk_index)
+    )
+    result = await db.execute(stmt)
+    chunks = result.scalars().all()
+
+    return [
+        {
+            "chunk_index": c.chunk_index,
+            "title": c.title,
+            "preview_text": c.content[:200] if c.content else "",
+            "char_count": len(c.content) if c.content else 0,
+            "has_embedding": c.embedding is not None,
+            "policy_id": str(c.id),
+        }
+        for c in chunks
+    ]

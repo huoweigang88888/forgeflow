@@ -14,6 +14,7 @@ import type {
 	TicketCreateResult,
 	TicketDetail,
 	TicketListItem,
+	TicketMetrics,
 	TicketStatusInfo,
 } from "@/types";
 import { api } from "./api";
@@ -36,6 +37,7 @@ export interface ListTicketsParams {
 	page?: number;
 	page_size?: number;
 	status?: string;
+	platform?: string;
 }
 
 export async function listTickets(
@@ -45,6 +47,7 @@ export async function listTickets(
 	if (params.page) searchParams.set("page", String(params.page));
 	if (params.page_size) searchParams.set("page_size", String(params.page_size));
 	if (params.status) searchParams.set("status", params.status);
+	if (params.platform) searchParams.set("platform", params.platform);
 
 	const qs = searchParams.toString();
 	const res = await api.get<{
@@ -111,6 +114,13 @@ export async function cancelTicket(
 export async function getDashboardStats(): Promise<DashboardStats> {
 	const res = await api.get<{ code: number; data: DashboardStats }>(
 		"/api/v1/tickets/stats/dashboard",
+	);
+	return res.data;
+}
+
+export async function getTicketMetrics(days = 30): Promise<TicketMetrics> {
+	const res = await api.get<{ code: number; data: TicketMetrics }>(
+		`/api/v1/tickets/stats/metrics?days=${days}`,
 	);
 	return res.data;
 }

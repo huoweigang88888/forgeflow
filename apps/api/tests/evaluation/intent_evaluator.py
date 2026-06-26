@@ -9,7 +9,7 @@ Target: Overall Accuracy >= 92%, Per-class F1 >= 0.85.
 
 import json
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -143,20 +143,26 @@ class IntentEvaluator:
 
         # Error analysis: find misclassified samples
         errors: list[dict[str, Any]] = []
-        for case, pred in zip(self.test_cases, predictions):
+        for case, pred in zip(self.test_cases, predictions, strict=False):
             if case.true_intent != pred.predicted_intent:
-                errors.append({
-                    "test_case_id": case.id,
-                    "issue_text": case.issue_text[:200],
-                    "true_intent": case.true_intent,
-                    "predicted_intent": pred.predicted_intent,
-                    "confidence": pred.confidence,
-                    "difficulty": case.difficulty,
-                })
+                errors.append(
+                    {
+                        "test_case_id": case.id,
+                        "issue_text": case.issue_text[:200],
+                        "true_intent": case.true_intent,
+                        "predicted_intent": pred.predicted_intent,
+                        "confidence": pred.confidence,
+                        "difficulty": case.difficulty,
+                    }
+                )
 
         # Difficulty breakdown
-        difficulty_breakdown: dict[str, list[tuple[int, int]]] = {"easy": [], "medium": [], "hard": []}
-        for case, pred in zip(self.test_cases, predictions):
+        difficulty_breakdown: dict[str, list[tuple[int, int]]] = {
+            "easy": [],
+            "medium": [],
+            "hard": [],
+        }
+        for case, pred in zip(self.test_cases, predictions, strict=False):
             diff = case.difficulty or "medium"
             if diff not in difficulty_breakdown:
                 diff = "medium"
@@ -197,20 +203,22 @@ def load_intent_cases(path: Path | str | None = None) -> list[IntentTestCase]:
     if path is None:
         path = Path(__file__).parent / "data" / "intent_test_set.json"
 
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         data = json.load(f)
 
     cases: list[IntentTestCase] = []
     for item in data:
-        cases.append(IntentTestCase(
-            id=item["id"],
-            issue_text=item["issue_text"],
-            order_id=item.get("order_id"),
-            true_intent=item["true_intent"],
-            true_urgency=item.get("true_urgency"),
-            true_sentiment=item.get("true_sentiment"),
-            source=item.get("source", "synthetic"),
-            difficulty=item.get("difficulty", "medium"),
-            annotator=item.get("annotator"),
-        ))
+        cases.append(
+            IntentTestCase(
+                id=item["id"],
+                issue_text=item["issue_text"],
+                order_id=item.get("order_id"),
+                true_intent=item["true_intent"],
+                true_urgency=item.get("true_urgency"),
+                true_sentiment=item.get("true_sentiment"),
+                source=item.get("source", "synthetic"),
+                difficulty=item.get("difficulty", "medium"),
+                annotator=item.get("annotator"),
+            )
+        )
     return cases

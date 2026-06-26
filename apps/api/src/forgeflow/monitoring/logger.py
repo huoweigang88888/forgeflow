@@ -8,6 +8,7 @@ distributed tracing correlation.
 
 import logging
 import sys
+import typing
 
 import structlog
 
@@ -24,23 +25,26 @@ def setup_logging(app_env: str = "development", log_level: str = "INFO") -> None
     """
     # Determine processor chain based on environment
     if app_env == "development":
-        renderer = structlog.dev.ConsoleRenderer(colors=True)
+        renderer: structlog.typing.Processor = structlog.dev.ConsoleRenderer(colors=True)
     else:
         renderer = structlog.processors.JSONRenderer(serializer=json.dumps, default=str)
 
     # Shared processors (before renderer)
-    shared_processors = [
+    shared_processors: list[structlog.typing.Processor] = [
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt="iso", utc=True),
-        structlog.stdlib.PositionalArgumentsFormatter(),
+        typing.cast(
+            structlog.typing.Processor,
+            structlog.stdlib.PositionalArgumentsFormatter(),
+        ),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),
     ]
 
     structlog.configure(
-        processors=shared_processors + [renderer],
+        processors=[*shared_processors, renderer],
         wrapper_class=structlog.make_filtering_bound_logger(logging.getLevelName(log_level)),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(sys.stderr),
@@ -55,7 +59,10 @@ def get_logger(**initial_context: str) -> structlog.BoundLogger:
         logger = get_logger(component="agent", ticket_id="tkt_123")
         logger.info("decision_made", action="auto_refund", amount=45.60)
     """
-    return structlog.get_logger().bind(**initial_context)
+    return typing.cast(
+        structlog.BoundLogger,
+        structlog.get_logger().bind(**initial_context),
+    )
 
 
 # Import json at module level for the default serializer

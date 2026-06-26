@@ -9,15 +9,16 @@ import { useTicketFilterStore } from "@/lib/store";
 import { listTickets } from "@/lib/tickets";
 
 export default function TicketsPage() {
-	const { status, page, pageSize, setStatus, setPage } = useTicketFilterStore();
+	const { status, platform, page, pageSize, setStatus, setPlatform, setPage } = useTicketFilterStore();
 
 	const { data, isLoading } = useQuery({
-		queryKey: ["tickets", { page, pageSize, status }],
+		queryKey: ["tickets", { page, pageSize, status, platform }],
 		queryFn: () =>
 			listTickets({
 				page,
 				page_size: pageSize,
 				status: status === "all" ? undefined : status,
+				platform: platform === "all" ? undefined : platform,
 			}),
 	});
 
@@ -32,7 +33,12 @@ export default function TicketsPage() {
 
 			{/* Filters */}
 			<div className="mb-4">
-				<FilterBar current={status} onChange={setStatus} />
+				<FilterBar
+					current={status}
+					onChange={setStatus}
+					platform={platform}
+					onPlatformChange={setPlatform}
+				/>
 			</div>
 
 			{/* Table */}

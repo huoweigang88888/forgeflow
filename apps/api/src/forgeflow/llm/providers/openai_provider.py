@@ -48,7 +48,7 @@ class OpenAIProvider(LLMProvider):
     async def complete_structured(
         self,
         prompt: str,
-        output_schema: dict,
+        output_schema: dict[str, Any],
         **kwargs: Any,
     ) -> LLMCallResult:
         """Send a prompt expecting structured JSON output.
@@ -81,9 +81,11 @@ class OpenAIProvider(LLMProvider):
             # Extract usage
             usage = response.usage
             tokens = usage.total_tokens if usage else 0
+            input_toks = usage.prompt_tokens if usage else 0
+            output_toks = usage.completion_tokens if usage else 0
             cost = self._estimate_cost(
-                prompt_tokens=usage.prompt_tokens if usage else 0,
-                completion_tokens=usage.completion_tokens if usage else 0,
+                prompt_tokens=input_toks,
+                completion_tokens=output_toks,
             )
 
             return LLMCallResult(
@@ -92,6 +94,8 @@ class OpenAIProvider(LLMProvider):
                 raw_response=raw,
                 latency_ms=latency_ms,
                 tokens_used=tokens,
+                input_tokens=input_toks,
+                output_tokens=output_toks,
                 cost=cost,
             )
 

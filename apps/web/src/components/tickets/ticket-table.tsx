@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import type { TicketListItem, TicketStatus } from "@/types";
+import Link from "next/link";
 
 const STATUS_COLORS: Record<TicketStatus, string> = {
 	received: "bg-slate-100 text-slate-700",
@@ -27,7 +27,17 @@ const INTENT_LABELS: Record<string, string> = {
 	wrong_item: "Wrong Item",
 	damaged_item: "Damaged Item",
 	exchange_request: "Exchange",
+	partial_refund: "Partial Refund",
+	subscription_cancel: "Cancel Subscription",
+	pre_sale_inquiry: "Pre-Sale Inquiry",
 	other: "Other",
+};
+
+const PLATFORM_LABELS: Record<string, string> = {
+	shopify: "Shopify",
+	woocommerce: "WooCommerce",
+	amazon: "Amazon",
+	mock: "Mock",
 };
 
 interface TicketTableProps {
@@ -65,6 +75,9 @@ export function TicketTable({ tickets, isLoading }: TicketTableProps) {
 								Ticket ID
 							</th>
 							<th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+								Platform
+							</th>
+							<th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
 								Customer
 							</th>
 							<th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -94,6 +107,13 @@ export function TicketTable({ tickets, isLoading }: TicketTableProps) {
 									>
 										{ticket.ticket_id}
 									</Link>
+								</td>
+								<td className="px-5 py-3">
+									<span className="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-600">
+										{ticket.platform
+											? (PLATFORM_LABELS[ticket.platform] ?? ticket.platform)
+											: "—"}
+									</span>
 								</td>
 								<td className="px-5 py-3">
 									<div>

@@ -23,10 +23,14 @@ class AgentLog(Base, UUIDMixin):
         UUID(as_uuid=True), ForeignKey("tickets.id"), nullable=False, index=True
     )
     step_name: Mapped[str] = mapped_column(
-        String(100), nullable=False, index=True,
+        String(100),
+        nullable=False,
+        index=True,
         doc="Node name: detect_intent | lookup_order | check_logistics | check_policy | make_decision | execute",
     )
-    step_order: Mapped[int] = mapped_column(Integer, default=0, doc="Execution order within the ticket")
+    step_order: Mapped[int] = mapped_column(
+        Integer, default=0, doc="Execution order within the ticket"
+    )
 
     # --- I/O ---
     input_data: Mapped[dict | None] = mapped_column(JSONB)
@@ -34,7 +38,8 @@ class AgentLog(Base, UUIDMixin):
 
     # --- Status ---
     status: Mapped[str] = mapped_column(
-        String(50), default="running",
+        String(50),
+        default="running",
         doc="running | success | failed | skipped",
     )
 

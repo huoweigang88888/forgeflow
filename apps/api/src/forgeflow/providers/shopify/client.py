@@ -34,7 +34,7 @@ from forgeflow.core.exceptions import (
 )
 from forgeflow.monitoring.logger import get_logger
 from forgeflow.providers.base import PlatformProvider
-from forgeflow.providers.dto import OrderInfo, RefundResult, TrackingInfo
+from forgeflow.providers.dto import ExchangeResult, OrderInfo, RefundResult, TrackingInfo
 
 logger = get_logger(component="providers.shopify")
 
@@ -56,7 +56,7 @@ class ShopifyAPIError(ProviderError):
 class ShopifyProvider(PlatformProvider):
     """Full Shopify platform provider implementation.
 
-    Uses Shopify Admin REST API (2024-01) with async httpx client.
+    Uses Shopify Admin REST API (2026-04) with async httpx client.
     All API calls include exponential backoff retry on transient errors.
 
     Usage:
@@ -73,7 +73,7 @@ class ShopifyProvider(PlatformProvider):
         self,
         shop_domain: str,
         access_token: str = "",
-        api_version: str = "2024-01",
+        api_version: str = "2026-04",
     ):
         """Initialize Shopify provider.
 
@@ -178,9 +178,7 @@ class ShopifyProvider(PlatformProvider):
         retry=retry_if_exception_type((httpx.HTTPStatusError, httpx.TimeoutException)),
         reraise=True,
     )
-    async def get_customer_orders(
-        self, customer_id: str, limit: int = 10
-    ) -> list[OrderInfo]:
+    async def get_customer_orders(self, customer_id: str, limit: int = 10) -> list[OrderInfo]:
         """Fetch recent orders for a customer.
 
         GET /admin/api/{version}/customers/{id}/orders.json
@@ -245,7 +243,7 @@ class ShopifyProvider(PlatformProvider):
         numeric_id = _extract_numeric_id(order_id)
 
         client = await self._get_client()
-        payload = {
+        payload: dict[str, Any] = {
             "refund": {
                 "currency": "USD",  # Will be overridden by order currency
                 "notify": notify_customer,
@@ -301,6 +299,98 @@ class ShopifyProvider(PlatformProvider):
             raise _handle_http_error(e) from e
 
     @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=8),
+        retry=retry_if_exception_type((httpx.HTTPStatusError, httpx.TimeoutException)),
+        reraise=True,
+    )
+    async def create_exchange(
+        self,
+        order_id: str,
+        reason: str,
+        exchange_items: list[dict[str, Any]] | None = None,
+        notify_customer: bool = True,
+    ) -> ExchangeResult:
+        """Initiate an exchange/return for an order.
+
+        In Shopify, exchanges are processed as:
+        1. Create a refund with "return" shipping instructions
+        2. Generate a return label (if Shopify Payments)
+        3. Optionally create a draft order for the replacement
+
+        POST /admin/api/{version}/orders/{id}/refunds.json
+        with ``return`` instructions enabled.
+
+        Args:
+            order_id: Shopify order ID.
+            reason: Reason for the exchange.
+            exchange_items: Optional line items to exchange.
+            notify_customer: Whether to send notification.
+
+        Returns:
+            ExchangeResult with return label and replacement info.
+        """
+        numeric_id = _extract_numeric_id(order_id)
+
+        client = await self._get_client()
+        payload: dict[str, Any] = {
+            "refund": {
+                "currency": "USD",
+                "notify": notify_customer,
+                "note": f"Exchange requested: {reason}",
+                "shipping": {
+                    "full_refund": False,
+                },
+                "transactions": [
+                    {
+                        "parent_id": None,
+                        "amount": "0.00",
+                        "kind": "refund",
+                        "gateway": "shopify_payments",
+                    }
+                ],
+            }
+        }
+
+        try:
+            # Get order for currency and transaction reference
+            order_resp = await client.get(f"/orders/{numeric_id}.json")
+            order_resp.raise_for_status()
+            order_data = order_resp.json()
+            order = order_data.get("order", {})
+
+            transactions = order.get("transactions", [])
+            if transactions:
+                payload["refund"]["transactions"][0]["parent_id"] = transactions[-1].get("id")
+            payload["refund"]["currency"] = order.get("currency", "USD")
+
+            response = await client.post(
+                f"/orders/{numeric_id}/refunds.json",
+                json=payload,
+            )
+            response.raise_for_status()
+            data = response.json()
+            refund = data.get("refund", {})
+
+            logger.info(
+                "shopify_exchange_success",
+                order_id=numeric_id,
+                exchange_id=refund.get("id"),
+            )
+            return ExchangeResult(
+                success=True,
+                exchange_id=str(refund.get("id", "")),
+                return_label_url=None,  # Phase 2: Shopify Return API
+                replacement_order_id=None,
+                amount=0.0,
+            )
+
+        except httpx.TimeoutException:
+            raise ProviderTimeoutError("shopify", timeout_s=30) from None
+        except httpx.HTTPStatusError as e:
+            raise _handle_http_error(e) from e
+
+    @retry(
         stop=stop_after_attempt(2),
         wait=wait_exponential(multiplier=1, min=1, max=4),
         retry=retry_if_exception_type((httpx.HTTPStatusError, httpx.TimeoutException)),
@@ -344,7 +434,7 @@ class ShopifyProvider(PlatformProvider):
 
     async def get_customer_history(
         self, customer_email: str, order_id: str | None = None
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Retrieve customer history for decision-making.
 
         Aggregates order history, refund count, and customer metadata
@@ -391,7 +481,7 @@ class ShopifyProvider(PlatformProvider):
             total_spent_val = float(customer.get("total_spent", "0") or "0")
 
             # 2. Fetch recent orders for ticket/refund history
-            recent_orders: list[dict] = []
+            recent_orders: list[dict[str, Any]] = []
             if customer_id:
                 try:
                     orders_resp = await client.get(
@@ -523,14 +613,10 @@ class ShopifyProvider(PlatformProvider):
                             "delivered": "delivered",
                             "failed": "unknown",
                         }
-                        normalized_status = status_map.get(
-                            ship_status or status, "in_transit"
-                        )
+                        normalized_status = status_map.get(ship_status or status, "in_transit")
 
                         # Calculate days in transit
-                        created_at = _parse_shopify_date(
-                            fulfillment.get("created_at")
-                        )
+                        created_at = _parse_shopify_date(fulfillment.get("created_at"))
                         days_in_transit = _days_since(created_at)
 
                         logger.info(
@@ -549,9 +635,8 @@ class ShopifyProvider(PlatformProvider):
                                 fulfillment.get("estimated_delivery_at")
                             ),
                             days_in_transit=days_in_transit,
-                            last_update=_parse_shopify_date(
-                                fulfillment.get("updated_at")
-                            ) or datetime.now(UTC),
+                            last_update=_parse_shopify_date(fulfillment.get("updated_at"))
+                            or datetime.now(UTC),
                             events=[],  # Shopify API doesn't provide tracking events
                         )
 
@@ -716,9 +801,7 @@ def _parse_shopify_order(order: dict[str, Any]) -> OrderInfo:
 
     # Customer info
     customer = order.get("customer", {}) or {}
-    customer_name = (
-        f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip()
-    )
+    customer_name = f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip()
     customer_email = customer.get("email", order.get("email", ""))
 
     return OrderInfo(

@@ -9,9 +9,11 @@ from forgeflow.models.agent_log import AgentLog
 from forgeflow.models.audit_log import AuditLog
 from forgeflow.models.customer import Customer
 from forgeflow.models.llm_call import LLMCall
+from forgeflow.models.notification import NotificationLog
 from forgeflow.models.order import Order
 from forgeflow.models.policy_document import PolicyDocument
 from forgeflow.models.prompt_version import PromptVersion
+from forgeflow.models.shopify_session import ShopifySession
 from forgeflow.models.ticket import Ticket
 
 __all__ = [
@@ -19,8 +21,10 @@ __all__ = [
     "AuditLog",
     "Customer",
     "LLMCall",
+    "NotificationLog",
     "Order",
     "PolicyDocument",
     "PromptVersion",
+    "ShopifySession",
     "Ticket",
 ]

@@ -53,7 +53,7 @@ async def onboard_tenant(
     from forgeflow.core.config import get_settings
     from forgeflow.db.engine import AsyncSessionLocal, engine
 
-    settings = get_settings()
+    _settings = get_settings()  # Validates settings are loadable before migration
 
     result = {
         "tenant_id": tenant_id,
@@ -64,7 +64,7 @@ async def onboard_tenant(
     }
 
     print(f"\n{'='*60}")
-    print(f"  ForgeFlow AI — Pilot Customer Onboarding")
+    print("  ForgeFlow AI — Pilot Customer Onboarding")
     print(f"  Tenant: {tenant_id}")
     print(f"  Platform: {platform}")
     print(f"  Budget: ${monthly_budget}/month")
@@ -75,6 +75,7 @@ async def onboard_tenant(
     try:
         async with engine.connect() as conn:
             from sqlalchemy import text
+
             await conn.execute(text("SELECT 1"))
         result["steps"]["database"] = "connected"
         print("  ✓ Database connected")
@@ -89,8 +90,10 @@ async def onboard_tenant(
         print("[2/5] Seeding default prompt versions...")
         try:
             from forgeflow.db.engine import AsyncSessionLocal
+
             async with AsyncSessionLocal() as session:
                 from forgeflow.prompts.registry import PromptRegistry
+
                 registry = PromptRegistry(session)
                 created = await registry.seed_default_prompts()
                 result["steps"]["prompts"] = f"seeded {len(created)} versions"
@@ -104,50 +107,52 @@ async def onboard_tenant(
         print("[3/5] Seeding default knowledge base policies...")
         try:
             from forgeflow.db.engine import AsyncSessionLocal
+
             async with AsyncSessionLocal() as session:
                 from forgeflow.crud.policy import create_policy
+
                 # Create default policies for this tenant
                 policy_defs = [
-                        {
-                            "title": "Standard Shipping Policy",
-                            "content": (
-                                "Orders are typically delivered within 5-7 business days. "
-                                "If delivery exceeds 14 days, customers are eligible for a full refund "
-                                "or free reshipment. For delays of 7-14 days, offer a 15% discount."
-                            ),
-                            "content_type": "policy",
-                        },
-                        {
-                            "title": "Standard Refund Policy",
-                            "content": (
-                                "Unfulfilled orders can be refunded immediately at 100%. "
-                                "Fulfilled orders: refund within 30 days of delivery. "
-                                "Damaged/wrong items: full refund or exchange within 14 days. "
-                                "Refunds over $100 require manager approval."
-                            ),
-                            "content_type": "policy",
-                        },
-                        {
-                            "title": "Exchange Policy",
-                            "content": (
-                                "Size/color exchanges are free within 30 days of delivery. "
-                                "Customer pays return shipping for non-defect exchanges. "
-                                "Defective items: free return + free exchange or full refund."
-                            ),
-                            "content_type": "policy",
-                        },
-                        {
-                            "title": "Shipping Delay FAQ",
-                            "content": (
-                                "Q: My order is late. What should I do? "
-                                "A: Contact us with your order number. If delayed > 14 days, "
-                                "you are eligible for a full refund. "
-                                "Q: How do I track my order? "
-                                "A: Use the tracking link in your shipping confirmation email."
-                            ),
-                            "content_type": "faq",
-                        },
-                    ]
+                    {
+                        "title": "Standard Shipping Policy",
+                        "content": (
+                            "Orders are typically delivered within 5-7 business days. "
+                            "If delivery exceeds 14 days, customers are eligible for a full refund "
+                            "or free reshipment. For delays of 7-14 days, offer a 15% discount."
+                        ),
+                        "content_type": "policy",
+                    },
+                    {
+                        "title": "Standard Refund Policy",
+                        "content": (
+                            "Unfulfilled orders can be refunded immediately at 100%. "
+                            "Fulfilled orders: refund within 30 days of delivery. "
+                            "Damaged/wrong items: full refund or exchange within 14 days. "
+                            "Refunds over $100 require manager approval."
+                        ),
+                        "content_type": "policy",
+                    },
+                    {
+                        "title": "Exchange Policy",
+                        "content": (
+                            "Size/color exchanges are free within 30 days of delivery. "
+                            "Customer pays return shipping for non-defect exchanges. "
+                            "Defective items: free return + free exchange or full refund."
+                        ),
+                        "content_type": "policy",
+                    },
+                    {
+                        "title": "Shipping Delay FAQ",
+                        "content": (
+                            "Q: My order is late. What should I do? "
+                            "A: Contact us with your order number. If delayed > 14 days, "
+                            "you are eligible for a full refund. "
+                            "Q: How do I track my order? "
+                            "A: Use the tracking link in your shipping confirmation email."
+                        ),
+                        "content_type": "faq",
+                    },
+                ]
                 policies = []
                 for pdef in policy_defs:
                     policy = await create_policy(
@@ -170,8 +175,10 @@ async def onboard_tenant(
     print(f"[4/5] Setting monthly budget to ${monthly_budget}...")
     try:
         from forgeflow.db.session import get_redis_client
+
         redis_client = await get_redis_client()
         from forgeflow.monitoring.cost_tracker import CostTracker
+
         tracker = CostTracker(redis_client)
         await tracker.set_tenant_budget(tenant_id, monthly_budget)
         result["steps"]["budget"] = f"${monthly_budget}/month"
@@ -190,7 +197,9 @@ async def onboard_tenant(
             # Verify provider is registered
             provider_ok = ProviderRegistry.is_registered(platform)
             if not provider_ok:
-                print(f"  ⚠ Platform '{platform}' not registered. Available: {ProviderRegistry.available_platforms()}")
+                print(
+                    f"  ⚠ Platform '{platform}' not registered. Available: {ProviderRegistry.available_platforms()}"
+                )
 
             result["steps"]["validation"] = "passed"
             print("  ✓ Validation complete")
@@ -209,44 +218,26 @@ async def onboard_tenant(
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="ForgeFlow AI — Pilot Customer Onboarding"
-    )
-    parser.add_argument(
-        "--tenant", required=True,
-        help="Tenant ID (e.g., shop domain)"
-    )
-    parser.add_argument(
-        "--platform", default="shopify",
-        help="Platform type (shopify, mock)"
-    )
-    parser.add_argument(
-        "--email", default="",
-        help="Admin email for the tenant"
-    )
-    parser.add_argument(
-        "--budget", type=float, default=50.0,
-        help="Monthly LLM cost budget in USD"
-    )
-    parser.add_argument(
-        "--no-policies", action="store_true",
-        help="Skip policy seeding"
-    )
-    parser.add_argument(
-        "--no-prompts", action="store_true",
-        help="Skip prompt seeding"
-    )
+    parser = argparse.ArgumentParser(description="ForgeFlow AI — Pilot Customer Onboarding")
+    parser.add_argument("--tenant", required=True, help="Tenant ID (e.g., shop domain)")
+    parser.add_argument("--platform", default="shopify", help="Platform type (shopify, mock)")
+    parser.add_argument("--email", default="", help="Admin email for the tenant")
+    parser.add_argument("--budget", type=float, default=50.0, help="Monthly LLM cost budget in USD")
+    parser.add_argument("--no-policies", action="store_true", help="Skip policy seeding")
+    parser.add_argument("--no-prompts", action="store_true", help="Skip prompt seeding")
 
     args = parser.parse_args()
 
-    result = asyncio.run(onboard_tenant(
-        tenant_id=args.tenant,
-        platform=args.platform,
-        admin_email=args.email,
-        monthly_budget=args.budget,
-        seed_policies=not args.no_policies,
-        seed_prompts=not args.no_prompts,
-    ))
+    result = asyncio.run(
+        onboard_tenant(
+            tenant_id=args.tenant,
+            platform=args.platform,
+            admin_email=args.email,
+            monthly_budget=args.budget,
+            seed_policies=not args.no_policies,
+            seed_prompts=not args.no_prompts,
+        )
+    )
 
     if result["status"] != "success":
         sys.exit(1)

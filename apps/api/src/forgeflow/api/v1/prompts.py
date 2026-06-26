@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from forgeflow.db.session import DBSession
+from forgeflow.prompts import RenderedPrompt
 from forgeflow.prompts.registry import PromptRegistry
 
 router = APIRouter(prefix="/prompts", tags=["prompts"])
@@ -69,17 +70,18 @@ async def list_prompt_names(db: DBSession) -> dict[str, Any]:
 async def list_versions(
     prompt_name: str,
     db: DBSession,
-):
+) -> dict[str, Any]:
     """List all versions for a given prompt."""
     registry = PromptRegistry(db)
-    return await registry.list_versions(prompt_name)
+    result = await registry.list_versions(prompt_name)
+    return {"code": 0, "data": result}
 
 
 @router.post("/register")
 async def register_prompt(
     body: PromptRegisterRequest,
     db: DBSession,
-):
+) -> dict[str, Any]:
     """Register a new prompt version. If activate=True, becomes active."""
     registry = PromptRegistry(db)
     pv = await registry.register(
@@ -105,7 +107,7 @@ async def register_prompt(
 async def rollback_prompt(
     body: PromptRollbackRequest,
     db: DBSession,
-):
+) -> dict[str, Any]:
     """Rollback a prompt to a previous version and activate it."""
     registry = PromptRegistry(db)
     try:
@@ -128,7 +130,7 @@ async def rollback_prompt(
 async def start_ab_test(
     body: ABTestStartRequest,
     db: DBSession,
-):
+) -> dict[str, Any]:
     """Start an A/B test for a prompt with hash-based traffic splitting."""
     registry = PromptRegistry(db)
 
@@ -164,7 +166,7 @@ async def start_ab_test(
 async def stop_ab_test(
     db: DBSession,
     prompt_name: str = Query(..., description="Prompt name to stop A/B test for"),
-):
+) -> dict[str, Any]:
     """Stop an active A/B test."""
     registry = PromptRegistry(db)
     await registry.stop_ab_test(prompt_name)
@@ -177,17 +179,14 @@ async def stop_ab_test(
 @router.post("/seed")
 async def seed_default_prompts(
     db: DBSession,
-):
+) -> dict[str, Any]:
     """Seed the database with default prompt templates from code."""
     registry = PromptRegistry(db)
     created = await registry.seed_default_prompts()
     return {
         "code": 0,
         "message": f"Seeded {len(created)} default prompts",
-        "data": [
-            {"prompt_name": p.prompt_name, "version": p.version}
-            for p in created
-        ],
+        "data": [{"prompt_name": p.prompt_name, "version": p.version} for p in created],
     }
 
 
@@ -196,19 +195,20 @@ async def preview_prompt(
     db: DBSession,
     prompt_name: str,
     version: str = Query(default="latest", description="Version or 'latest'"),
-):
+) -> dict[str, Any]:
     """Preview a rendered prompt template."""
     registry = PromptRegistry(db)
 
+    rendered: RenderedPrompt | None
     if version == "latest":
         rendered = await registry.get_active(prompt_name)
     else:
         rendered = await registry.get_version(prompt_name, version)
-        if rendered is None:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Version '{version}' of '{prompt_name}' not found",
-            )
+    if rendered is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Version '{version}' of '{prompt_name}' not found",
+        )
 
     return {
         "code": 0,

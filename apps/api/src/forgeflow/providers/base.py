@@ -14,8 +14,9 @@ From PRD Section 17: Multi-Platform Abstraction Design.
 
 from abc import ABC, abstractmethod
 from datetime import datetime
+from typing import Any
 
-from forgeflow.providers.dto import OrderInfo, RefundResult, TrackingInfo
+from forgeflow.providers.dto import ExchangeResult, OrderInfo, RefundResult, TrackingInfo
 
 # =============================================================================
 # Sub-Providers (can be implemented independently)
@@ -44,9 +45,7 @@ class OrderProvider(ABC):
         ...
 
     @abstractmethod
-    async def get_customer_orders(
-        self, customer_id: str, limit: int = 10
-    ) -> list[OrderInfo]:
+    async def get_customer_orders(self, customer_id: str, limit: int = 10) -> list[OrderInfo]:
         """Retrieve recent orders for a customer.
 
         Args:
@@ -92,9 +91,33 @@ class OrderProvider(ABC):
         ...
 
     @abstractmethod
+    async def create_exchange(
+        self,
+        order_id: str,
+        reason: str,
+        exchange_items: list[dict[str, Any]] | None = None,
+        notify_customer: bool = True,
+    ) -> ExchangeResult:
+        """Initiate an exchange/return for an order.
+
+        Creates a return label and (optionally) a replacement order.
+
+        Args:
+            order_id: Platform order ID.
+            reason: Reason for the exchange.
+            exchange_items: Optional list of line items to exchange
+                (defaults to all items).
+            notify_customer: Whether to send notification email.
+
+        Returns:
+            ExchangeResult with return label and replacement info.
+        """
+        ...
+
+    @abstractmethod
     async def get_customer_history(
         self, customer_email: str, order_id: str | None = None
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Retrieve customer history for decision-making.
 
         Args:
@@ -151,9 +174,7 @@ class NotificationProvider(ABC):
     """
 
     @abstractmethod
-    async def send_email(
-        self, to: str, subject: str, body: str
-    ) -> bool:
+    async def send_email(self, to: str, subject: str, body: str) -> bool:
         """Send an email notification.
 
         Args:
