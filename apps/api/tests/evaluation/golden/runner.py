@@ -15,6 +15,7 @@ from typing import Any
 
 import yaml
 
+import forgeflow.providers  # noqa: F401 — ensure mock provider is registered
 from forgeflow.agent.service import AgentService
 
 
@@ -105,7 +106,7 @@ class GoldenTestRunner:
 
         Supports multi-document YAML (separated by ``---``).
         """
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             docs = list(yaml.safe_load_all(f))
 
         cases: list[GoldenTestCase] = []
@@ -113,26 +114,30 @@ class GoldenTestRunner:
             if doc is None:
                 continue
             if isinstance(doc, dict):
-                cases.append(GoldenTestCase(
-                    id=doc.get("id", ""),
-                    name=doc.get("name", ""),
-                    description=doc.get("description", ""),
-                    tags=doc.get("tags", []),
-                    input=doc.get("input", {}),
-                    mock_overrides=doc.get("mock_overrides", {}),
-                    expected=doc.get("expected", {}),
-                ))
+                cases.append(
+                    GoldenTestCase(
+                        id=doc.get("id", ""),
+                        name=doc.get("name", ""),
+                        description=doc.get("description", ""),
+                        tags=doc.get("tags", []),
+                        input=doc.get("input", {}),
+                        mock_overrides=doc.get("mock_overrides", {}),
+                        expected=doc.get("expected", {}),
+                    )
+                )
             elif isinstance(doc, list):
                 for item in doc:
-                    cases.append(GoldenTestCase(
-                        id=item.get("id", ""),
-                        name=item.get("name", ""),
-                        description=item.get("description", ""),
-                        tags=item.get("tags", []),
-                        input=item.get("input", {}),
-                        mock_overrides=item.get("mock_overrides", {}),
-                        expected=item.get("expected", {}),
-                    ))
+                    cases.append(
+                        GoldenTestCase(
+                            id=item.get("id", ""),
+                            name=item.get("name", ""),
+                            description=item.get("description", ""),
+                            tags=item.get("tags", []),
+                            input=item.get("input", {}),
+                            mock_overrides=item.get("mock_overrides", {}),
+                            expected=item.get("expected", {}),
+                        )
+                    )
 
         return cases
 
@@ -200,8 +205,7 @@ class GoldenTestRunner:
             actual_amount = result.get("refund_amount", 0.0) or 0.0
             if not (lo <= actual_amount <= hi):
                 warnings.append(
-                    f"refund_amount out of range [{lo}, {hi}]: "
-                    f"actual={actual_amount}"
+                    f"refund_amount out of range [{lo}, {hi}]: " f"actual={actual_amount}"
                 )
 
         # 4. Check intent (if expected)
@@ -209,18 +213,14 @@ class GoldenTestRunner:
             exp_intent = expected["intent"]
             actual_intent = result.get("intent")
             if actual_intent != exp_intent:
-                failures.append(
-                    f"intent mismatch: expected={exp_intent}, actual={actual_intent}"
-                )
+                failures.append(f"intent mismatch: expected={exp_intent}, actual={actual_intent}")
 
         # 5. Check status
         if "status" in expected:
             exp_status = expected["status"]
             actual_status = result.get("status")
             if actual_status != exp_status:
-                failures.append(
-                    f"status mismatch: expected={exp_status}, actual={actual_status}"
-                )
+                failures.append(f"status mismatch: expected={exp_status}, actual={actual_status}")
 
         # 6. Check confidence minimum
         if "confidence_min" in expected:
@@ -271,3 +271,57 @@ def dump_report_json(report: GoldenTestReport, path: Path) -> None:
     }
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+
+
+# =============================================================================
+# CLI Entry Point: python -m tests.evaluation.golden.runner
+# =============================================================================
+
+if __name__ == "__main__":
+    import asyncio
+    import sys
+
+    async def main() -> None:
+        cases_dir = Path(__file__).resolve().parent / "cases"
+        if not cases_dir.exists():
+            print(f"ERROR: Golden test cases directory not found: {cases_dir}")
+            sys.exit(1)
+
+        runner = GoldenTestRunner(cases_dir)
+        print(f"Running golden tests from: {cases_dir}")
+        print(f"Cases found: {len(list(cases_dir.glob('*.yaml')))} YAML files")
+        print("-" * 60)
+
+        report = await runner.run_all()
+
+        # Print summary
+        print(f"\n{'='*60}")
+        print("Golden Test Results")
+        print(f"{'='*60}")
+        print(f"Total:    {report.total}")
+        print(f"Passed:   {report.passed}")
+        print(f"Failed:   {report.failed}")
+        print(f"Rate:     {report.pass_rate * 100:.1f}%")
+        print(f"Time:     {report.total_time_ms:.0f}ms")
+        print(f"{'='*60}")
+
+        # Print per-result details
+        for r in report.results:
+            icon = "[PASS]" if r.passed else "[FAIL]"
+            print(f"\n{icon} [{r.case_id}] {r.name}")
+            if not r.passed:
+                for f in r.failures:
+                    print(f"   FAIL: {f}")
+            for w in r.warnings:
+                print(f"   WARN: {w}")
+            print(f"   Duration: {r.duration_ms:.0f}ms")
+
+        # Exit code: fail if any golden test failed
+        if report.failed > 0:
+            print(f"\nFAIL: {report.failed}/{report.total} golden tests FAILED")
+            sys.exit(1)
+        else:
+            print(f"\nOK: All {report.total} golden tests PASSED")
+            sys.exit(0)
+
+    asyncio.run(main())

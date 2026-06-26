@@ -37,7 +37,7 @@ class ModelRouter:
         self.complex_model = settings.llm.complex_model
 
     async def route_decision(
-        self, prompt: str, output_schema: dict, **kwargs: Any
+        self, prompt: str, output_schema: dict[str, Any], **kwargs: Any
     ) -> LLMCallResult:
         """Two-tier model routing for decision-making.
 
@@ -68,11 +68,11 @@ class ModelRouter:
         # If even the complex model failed, return the original result
         return result
 
-    def _is_confident(self, data: dict | None) -> bool:
+    def _is_confident(self, data: dict[str, Any] | None) -> bool:
         """Check if the model output meets the confidence threshold."""
         if data is None:
             return False
         confidence = data.get("confidence", 0.0)
-        if isinstance(confidence, (int, float)):
+        if isinstance(confidence, int | float):
             return confidence >= self.DECISION_THRESHOLD
         return True  # No confidence field means we trust it

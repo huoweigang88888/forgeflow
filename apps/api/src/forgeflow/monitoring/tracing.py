@@ -5,14 +5,17 @@ Sets up distributed tracing with OpenTelemetry SDK and FastAPI auto-instrumentat
 All HTTP requests and LLM calls are traced for end-to-end visibility.
 """
 
-
 from fastapi import FastAPI
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter, SpanExporter
+
+from forgeflow.monitoring.logger import get_logger
+
+logger = get_logger(component="monitoring.tracing")
 
 
 def setup_tracing(app: FastAPI, otel_endpoint: str | None = None) -> None:
@@ -27,6 +30,7 @@ def setup_tracing(app: FastAPI, otel_endpoint: str | None = None) -> None:
     provider = TracerProvider(resource=resource)
 
     # Choose exporter based on environment
+    exporter: SpanExporter
     if otel_endpoint:
         exporter = OTLPSpanExporter(endpoint=otel_endpoint, insecure=True)
     else:

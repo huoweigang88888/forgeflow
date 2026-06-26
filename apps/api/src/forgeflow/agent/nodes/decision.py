@@ -64,10 +64,17 @@ async def make_decision_node(state: AgentState) -> dict[str, Any]:
     # =========================================================================
 
     # Rule 0: No order_id → escalate (cannot process without an order)
+    # EXCEPTION: pre_sale_inquiry — pre-purchase questions have no order by definition
     order_id_from_info = order_info.get("order_id") if order_info else None
     order_id_from_state = state.get("order_id")
     effective_order_id = order_id_from_info or order_id_from_state
-    if not effective_order_id or (isinstance(effective_order_id, str) and effective_order_id.lower() in ("not provided", "unknown", "")):
+    if intent != "pre_sale_inquiry" and (
+        not effective_order_id
+        or (
+            isinstance(effective_order_id, str)
+            and effective_order_id.lower() in ("not provided", "unknown", "")
+        )
+    ):
         logger.info("decision_no_order_id", ticket_id=ticket_id)
         return _build_decision(
             action="escalate_to_human",
@@ -79,9 +86,20 @@ async def make_decision_node(state: AgentState) -> dict[str, Any]:
 
     # Rule 0b: Chargeback / legal threat → escalate (keyword-based, no LLM cost)
     chargeback_keywords = [
-        "chargeback", "charge back", "dispute with my bank", "file a dispute",
-        "fraud", "lawsuit", "sue you", "legal action", "attorney", "lawyer",
-        "better business bureau", "bbb", "ftc", "consumer protection",
+        "chargeback",
+        "charge back",
+        "dispute with my bank",
+        "file a dispute",
+        "fraud",
+        "lawsuit",
+        "sue you",
+        "legal action",
+        "attorney",
+        "lawyer",
+        "better business bureau",
+        "bbb",
+        "ftc",
+        "consumer protection",
     ]
     issue_text_lower = state.get("issue_text", "").lower()
     if any(kw in issue_text_lower for kw in chargeback_keywords):
@@ -98,8 +116,13 @@ async def make_decision_node(state: AgentState) -> dict[str, Any]:
         )
 
     # Rule 1: Unfulfilled → auto_refund (no approval)
+    # NOTE: subscription_cancel excluded — always needs manual verification
     if fulfillment_status == "unfulfilled" and intent in (
-        "refund_request", "wrong_item", "damaged_item", "exchange_request",
+        "refund_request",
+        "wrong_item",
+        "damaged_item",
+        "exchange_request",
+        "partial_refund",
     ):
         return _build_decision(
             action="auto_refund",
@@ -111,8 +134,13 @@ async def make_decision_node(state: AgentState) -> dict[str, Any]:
         )
 
     # Rule 2: Small amount → auto_refund (no approval)
+    # NOTE: subscription_cancel excluded — always needs manual verification
     if order_total < auto_threshold and intent in (
-        "refund_request", "shipping_delay", "damaged_item", "wrong_item",
+        "refund_request",
+        "shipping_delay",
+        "damaged_item",
+        "wrong_item",
+        "partial_refund",
     ):
         reason = _build_refund_reason(intent, logistics_state)
         return _build_decision(
@@ -127,9 +155,13 @@ async def make_decision_node(state: AgentState) -> dict[str, Any]:
         )
 
     # Rule 3: Logistics delay or lost → auto_refund with approval (if above threshold)
-    # Covers shipping_delay, refund_request, damaged_item, wrong_item
+    # Covers shipping_delay, refund_request, damaged_item, wrong_item, partial_refund
     if logistics_state in ("delayed", "lost") and intent in (
-        "shipping_delay", "refund_request", "damaged_item", "wrong_item",
+        "shipping_delay",
+        "refund_request",
+        "damaged_item",
+        "wrong_item",
+        "partial_refund",
     ):
         return _build_decision(
             action="auto_refund",
@@ -146,7 +178,50 @@ async def make_decision_node(state: AgentState) -> dict[str, Any]:
             ),
         )
 
-    # Rule 4: Intent is irrelevant → escalate or notify
+    # Rule 4: Pre-sale inquiry → send_notification (no order context)
+    if intent == "pre_sale_inquiry":
+        return _build_decision(
+            action="send_notification",
+            amount=0.0,
+            reason="Pre-sale inquiry — no order to process",
+            requires_approval=False,
+            explanation=(
+                "Customer is asking a pre-purchase question. "
+                "No order exists to process. Sending informational response."
+            ),
+        )
+
+    # Rule 4b: Subscription cancel → escalate (requires manual processing)
+    if intent == "subscription_cancel":
+        return _build_decision(
+            action="auto_refund",
+            amount=order_total,
+            reason="Subscription cancellation request",
+            requires_approval=True,
+            approval_reason="Subscription cancellations require manual verification of recurring status",
+            explanation=(
+                f"Customer requested subscription cancellation for order "
+                f"#{order_info.get('order_number', 'N/A')}. "
+                "Requires approval to verify subscription status and process cancellation."
+            ),
+        )
+
+    # Rule 4c: Partial refund → auto_refund with approval (non-standard amount)
+    if intent == "partial_refund":
+        return _build_decision(
+            action="auto_refund",
+            amount=order_total * 0.5,  # Default 50%, adjust with LLM in slow path
+            reason="Partial refund requested — customer wants to keep item",
+            requires_approval=True,
+            approval_reason="Partial refund amounts require human review",
+            explanation=(
+                "Customer requested a partial refund and wants to keep the item. "
+                "A default 50% refund is proposed but requires human approval "
+                "to determine the appropriate amount."
+            ),
+        )
+
+    # Rule 5: Intent is irrelevant → escalate or notify
     if intent == "other":
         return _build_decision(
             action="escalate_to_human",
@@ -156,12 +231,16 @@ async def make_decision_node(state: AgentState) -> dict[str, Any]:
             explanation="The customer's issue does not match standard after-sales categories.",
         )
 
-    # Rule 5: High-value change-of-mind return or delivered dispute
+    # Rule 6: High-value change-of-mind return or delivered dispute
     # (fulfilled + delivered + refund_request) → auto_refund with approval
-    if (fulfillment_status == "fulfilled" and logistics_state == "delivered"
-            and intent in ("refund_request", "shipping_delay", "damaged_item", "wrong_item")):
+    if (
+        fulfillment_status == "fulfilled"
+        and logistics_state == "delivered"
+        and intent
+        in ("refund_request", "shipping_delay", "damaged_item", "wrong_item", "partial_refund")
+    ):
         # Repeat refunder check
-        refund_count = customer_history.get("refund_count", 0)
+        refund_count = (customer_history or {}).get("refund_count", 0)
         needs_approval = order_total >= auto_threshold or refund_count >= 3
         approval_reason = None
         if needs_approval:
@@ -247,6 +326,9 @@ def _build_refund_reason(intent: str, logistics_state: str) -> str:
         "damaged_item": "Customer reported damaged item",
         "wrong_item": "Customer received wrong item",
         "exchange_request": "Exchange requested — refunding original order",
+        "partial_refund": "Customer requested partial refund — keeping item",
+        "subscription_cancel": "Subscription cancellation — refunding remaining balance",
+        "pre_sale_inquiry": "Pre-sale inquiry — informational response",
     }
     return reason_map.get(intent, "Customer after-sales request")
 

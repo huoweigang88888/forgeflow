@@ -36,6 +36,7 @@ describe("useTicketFilterStore", () => {
 	it("initializes with defaults", () => {
 		const s = useTicketFilterStore.getState();
 		expect(s.status).toBe("all");
+		expect(s.platform).toBe("all");
 		expect(s.page).toBe(1);
 		expect(s.pageSize).toBe(20);
 	});
@@ -45,6 +46,14 @@ describe("useTicketFilterStore", () => {
 		useTicketFilterStore.getState().setStatus("pending_approval");
 		const s = useTicketFilterStore.getState();
 		expect(s.status).toBe("pending_approval");
+		expect(s.page).toBe(1); // page resets
+	});
+
+	it("setPlatform updates platform and resets page to 1", () => {
+		useTicketFilterStore.setState({ page: 5, platform: "all" });
+		useTicketFilterStore.getState().setPlatform("woocommerce");
+		const s = useTicketFilterStore.getState();
+		expect(s.platform).toBe("woocommerce");
 		expect(s.page).toBe(1); // page resets
 	});
 
@@ -67,12 +76,14 @@ describe("useTicketFilterStore", () => {
 	it("resetFilters restores defaults", () => {
 		useTicketFilterStore.setState({
 			status: "resolved",
+			platform: "shopify",
 			page: 4,
 			pageSize: 50,
 		});
 		useTicketFilterStore.getState().resetFilters();
 		const s = useTicketFilterStore.getState();
 		expect(s.status).toBe("all");
+		expect(s.platform).toBe("all");
 		expect(s.page).toBe(1);
 		expect(s.pageSize).toBe(20);
 	});

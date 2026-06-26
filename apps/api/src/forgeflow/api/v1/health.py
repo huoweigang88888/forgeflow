@@ -52,6 +52,7 @@ async def readiness_check():
         import redis.asyncio as redis
 
         from forgeflow.core.config import get_settings
+
         r = redis.from_url(get_settings().redis_url)
         await r.ping()
         await r.close()

@@ -19,6 +19,7 @@ Usage:
     provider = ProviderRegistry.get("shopify", shop_domain="...", access_token="...")
 """
 
+from forgeflow.providers.amazon.client import AmazonProvider
 from forgeflow.providers.base import (
     LogisticsProvider,
     NotificationProvider,
@@ -28,26 +29,30 @@ from forgeflow.providers.base import (
 from forgeflow.providers.dto import OrderInfo, RefundResult, TrackingInfo
 from forgeflow.providers.mock import MockPlatformProvider
 from forgeflow.providers.registry import ProviderRegistry
+from forgeflow.providers.shopify.client import ShopifyProvider
+from forgeflow.providers.woocommerce.client import WooCommerceProvider
 
 # Register providers
-from forgeflow.providers.shopify.client import ShopifyProvider
-
+ProviderRegistry.register("amazon", AmazonProvider)
 ProviderRegistry.register("shopify", ShopifyProvider)
+ProviderRegistry.register("woocommerce", WooCommerceProvider)
 ProviderRegistry.register("mock", MockPlatformProvider)
 
 __all__ = [
-    # Interfaces
-    "OrderProvider",
+    "AmazonProvider",
     "LogisticsProvider",
+    "MockPlatformProvider",
     "NotificationProvider",
-    "PlatformProvider",
     # DTOs
     "OrderInfo",
-    "RefundResult",
-    "TrackingInfo",
+    # Interfaces
+    "OrderProvider",
+    "PlatformProvider",
     # Registry
     "ProviderRegistry",
+    "RefundResult",
     # Implementations
     "ShopifyProvider",
-    "MockPlatformProvider",
+    "TrackingInfo",
+    "WooCommerceProvider",
 ]

@@ -1,7 +1,7 @@
 "use client";
 
-import { CheckCircle2, Circle, Clock, XCircle } from "lucide-react";
 import type { StepName, StepStatus } from "@/types";
+import { CheckCircle2, Circle, Clock, XCircle } from "lucide-react";
 
 const STEP_LABELS: Record<StepName, string> = {
 	detect_intent: "Detect Intent",

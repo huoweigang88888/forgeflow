@@ -10,7 +10,7 @@ From PRD Section 15.4: End-to-End Regression Tests (Golden Test Cases).
 import pytest
 
 from forgeflow.agent.service import AgentService
-from forgeflow.agent.state import AgentState, get_initial_state
+from forgeflow.agent.state import get_initial_state
 from forgeflow.providers.registry import ProviderRegistry
 
 # Ensure mock provider is registered
@@ -47,9 +47,10 @@ async def test_golden_case_shipping_delay_auto_refund(agent_service):
     # and logistics status defaults to in_transit
     # With our config threshold at 50.0, 45.60 < 50.0 → auto_refund
     action = result.get("recommended_action")
-    assert action in ("auto_refund", "escalate_to_human"), (
-        f"Expected auto_refund or escalate_to_human, got {action}"
-    )
+    assert action in (
+        "auto_refund",
+        "escalate_to_human",
+    ), f"Expected auto_refund or escalate_to_human, got {action}"
     # Check that a decision was actually made
     assert result.get("status") in (
         "resolved",
@@ -154,6 +155,72 @@ async def test_golden_case_non_standard_inquiry(agent_service):
 
 
 # =============================================================================
+# Golden Case 6: Partial Refund
+# =============================================================================
+
+
+@pytest.mark.asyncio
+async def test_golden_case_partial_refund(agent_service):
+    """Case: customer wants partial refund and keeps the item."""
+    result = await agent_service.run(
+        ticket_id="golden_006",
+        platform="mock",
+        shopify_domain="test.myshopify.com",
+        customer_email="buyer@test.com",
+        issue_text=(
+            "I received my order but the price dropped the next day. "
+            "Can I get a partial refund for the difference?"
+        ),
+        order_id="order_006",
+    )
+
+    assert result.get("status") in ("resolved", "pending_approval", "escalated")
+    assert "recommended_action" in result
+
+
+# =============================================================================
+# Golden Case 7: Subscription Cancel
+# =============================================================================
+
+
+@pytest.mark.asyncio
+async def test_golden_case_subscription_cancel(agent_service):
+    """Case: customer wants to cancel their subscription."""
+    result = await agent_service.run(
+        ticket_id="golden_007",
+        platform="mock",
+        shopify_domain="test.myshopify.com",
+        customer_email="subscriber@test.com",
+        issue_text="Please cancel my monthly subscription box. Stop the recurring charges!",
+        order_id="order_007",
+    )
+
+    assert result.get("status") in ("resolved", "pending_approval", "escalated")
+    assert "recommended_action" in result
+
+
+# =============================================================================
+# Golden Case 8: Pre-Sale Inquiry
+# =============================================================================
+
+
+@pytest.mark.asyncio
+async def test_golden_case_pre_sale_inquiry(agent_service):
+    """Case: customer asking a pre-purchase question."""
+    result = await agent_service.run(
+        ticket_id="golden_008",
+        platform="mock",
+        shopify_domain="test.myshopify.com",
+        customer_email="prospect@test.com",
+        issue_text="Does this laptop stand work with the 16-inch MacBook Pro? I'm thinking of buying one.",
+        order_id=None,
+    )
+
+    assert result.get("status") in ("resolved", "pending_approval", "escalated", "failed")
+    assert "recommended_action" in result
+
+
+# =============================================================================
 # Integration: Full pipeline with explicit state
 # =============================================================================
 
@@ -182,9 +249,9 @@ async def test_full_pipeline_from_state():
     assert result.get("order_info") is not None, "Order lookup did not run"
     assert result.get("logistics_status") is not None, "Logistics check did not run"
     assert result.get("recommended_action") is not None, "Decision did not run"
-    assert result.get("execution_status") == "success", (
-        f"Execution should succeed. Got: {result.get('execution_status')}"
-    )
+    assert (
+        result.get("execution_status") == "success"
+    ), f"Execution should succeed. Got: {result.get('execution_status')}"
     assert result.get("recommended_action") == "auto_refund", (
         f"Mock provider returns $45.60 (below $50 threshold). "
         f"Expected auto_refund, got: {result.get('recommended_action')}"

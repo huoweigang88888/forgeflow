@@ -12,8 +12,8 @@ from dataclasses import dataclass
 from typing import Any
 
 from forgeflow.agent.graph import get_agent_graph
-from forgeflow.agent.state import AgentState, get_initial_state
 from forgeflow.agent.nodes import detect_intent_node
+from forgeflow.agent.state import AgentState, get_initial_state
 from forgeflow.monitoring.logger import get_logger
 
 logger = get_logger(component="benchmark")
@@ -137,7 +137,7 @@ async def benchmark_llm_latency() -> dict[str, Any]:
         for _ in range(5):
             try:
                 start = time.perf_counter()
-                result = await provider.complete(test_prompt)
+                _ = await provider.complete(test_prompt)
                 durations.append((time.perf_counter() - start) * 1000)
             except Exception:
                 errors += 1
@@ -165,8 +165,16 @@ def _build_report(durations: list[float], runs: int) -> BenchmarkReport:
     """Build a BenchmarkReport from raw duration list."""
     if not durations:
         return BenchmarkReport(
-            total_runs=0, avg_ms=0, median_ms=0, p95_ms=0, p99_ms=0,
-            min_ms=0, max_ms=0, passed=False, per_node_ms={}, total_time_ms=0,
+            total_runs=0,
+            avg_ms=0,
+            median_ms=0,
+            p95_ms=0,
+            p99_ms=0,
+            min_ms=0,
+            max_ms=0,
+            passed=False,
+            per_node_ms={},
+            total_time_ms=0,
         )
 
     sorted_d = sorted(durations)

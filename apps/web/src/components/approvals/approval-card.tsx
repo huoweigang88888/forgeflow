@@ -1,15 +1,53 @@
 "use client";
 
-import { AlertTriangle, Check, DollarSign, X } from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
 import type { TicketListItem } from "@/types";
+import { AlertTriangle, Check, Clock, DollarSign, X } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 interface ApprovalCardProps {
 	ticket: TicketListItem;
 	onApprove: (ticketId: string, note: string) => Promise<void>;
 	onReject: (ticketId: string, note: string) => Promise<void>;
 	isSubmitting: boolean;
+}
+
+function formatSlaCountdown(remainingSeconds: number): string {
+	if (remainingSeconds <= 0) return "00:00:00";
+	const h = Math.floor(remainingSeconds / 3600);
+	const m = Math.floor((remainingSeconds % 3600) / 60);
+	const s = remainingSeconds % 60;
+	if (remainingSeconds > 7200) {
+		return `${h}h ${m}m remaining`;
+	}
+	return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function useSlaTimer(slaDeadline: string | null | undefined) {
+	const [remaining, setRemaining] = useState<number | null>(null);
+	const [breached, setBreached] = useState(false);
+
+	useEffect(() => {
+		if (!slaDeadline) {
+			setRemaining(null);
+			setBreached(false);
+			return;
+		}
+
+		const tick = () => {
+			const now = Date.now();
+			const deadline = new Date(slaDeadline).getTime();
+			const diff = Math.max(0, Math.floor((deadline - now) / 1000));
+			setRemaining(diff);
+			setBreached(diff <= 0);
+		};
+
+		tick();
+		const interval = setInterval(tick, 1000);
+		return () => clearInterval(interval);
+	}, [slaDeadline]);
+
+	return { remaining, breached };
 }
 
 export function ApprovalCard({
@@ -22,6 +60,8 @@ export function ApprovalCard({
 	const [mode, setMode] = useState<
 		"idle" | "confirm_approve" | "confirm_reject"
 	>("idle");
+
+	const { remaining, breached } = useSlaTimer(ticket.sla_deadline);
 
 	const handleConfirm = async () => {
 		if (mode === "confirm_approve") {
@@ -80,6 +120,26 @@ export function ApprovalCard({
 					</div>
 				)}
 			</div>
+
+			{/* SLA Countdown */}
+			{remaining != null && (
+				<div
+					className={`flex items-center gap-2 mb-3 px-3 py-1.5 rounded-lg text-xs font-medium ${
+						breached
+							? "bg-red-50 text-red-700"
+							: remaining < 7200
+								? "bg-amber-50 text-amber-700"
+								: "bg-slate-50 text-slate-600"
+					}`}
+				>
+					<Clock size={14} />
+					{breached ? (
+						<span>SLA Breached</span>
+					) : (
+						<span>{formatSlaCountdown(remaining)}</span>
+					)}
+				</div>
+			)}
 
 			{/* Note input */}
 			<div className="mb-3">

@@ -4,8 +4,8 @@
  * Phase 2: Dashboard filter state, approval queue selection, ticket filters.
  */
 
-import { create } from "zustand";
 import type { TicketStatus } from "@/types";
+import { create } from "zustand";
 
 // ── UI State ──
 
@@ -25,9 +25,11 @@ export const useUIStore = create<UIState>((set) => ({
 
 interface TicketFilterState {
 	status: TicketStatus | "all";
+	platform: string | "all";
 	page: number;
 	pageSize: number;
 	setStatus: (status: TicketStatus | "all") => void;
+	setPlatform: (platform: string | "all") => void;
 	setPage: (page: number) => void;
 	setPageSize: (size: number) => void;
 	resetFilters: () => void;
@@ -35,12 +37,14 @@ interface TicketFilterState {
 
 export const useTicketFilterStore = create<TicketFilterState>((set) => ({
 	status: "all",
+	platform: "all",
 	page: 1,
 	pageSize: 20,
 	setStatus: (status) => set({ status, page: 1 }),
+	setPlatform: (platform) => set({ platform, page: 1 }),
 	setPage: (page) => set({ page }),
 	setPageSize: (pageSize) => set({ pageSize, page: 1 }),
-	resetFilters: () => set({ status: "all", page: 1, pageSize: 20 }),
+	resetFilters: () => set({ status: "all", platform: "all", page: 1, pageSize: 20 }),
 }));
 
 // ── Approval Queue State ──

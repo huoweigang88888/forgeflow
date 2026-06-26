@@ -17,12 +17,14 @@ Endpoints:
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 
 from forgeflow.agent.service import AgentService
 from forgeflow.api.v1.ws import get_redis
 from forgeflow.crud import ticket as ticket_crud
-from forgeflow.db.session import DBSession
+from forgeflow.crud.shopify_session import get_session_by_domain
+from forgeflow.db.session import DBSession, OptionalDBSession
+from forgeflow.middleware.auth import get_optional_shop
 from forgeflow.monitoring.logger import get_logger
 from forgeflow.schemas.ticket import (
     ApprovalRequest,
@@ -70,21 +72,47 @@ async def create_ticket(
     body: TicketCreateRequest,
     background_tasks: BackgroundTasks,
     db: DBSession,
+    current_shop: str = Depends(get_optional_shop),
 ) -> dict[str, Any]:
     """Create a new ticket and start the agent processing pipeline.
 
     The ticket is persisted to the database and queued for immediate
     processing.  Use the returned ticket_id to poll status or connect
     via WebSocket.
+
+    When authenticated (Shopify store connected), the agent uses the
+    real Shopify access token for API calls.  Without auth, falls back
+    to the platform specified in the request body (default: mock).
     """
+    # Determine platform and credentials
+    # If the shop has an active Shopify session, use real Shopify
+    platform = body.platform
+    shopify_domain = current_shop or ""
+    access_token: str | None = None
+
+    if current_shop:
+        shopify_session = await get_session_by_domain(db, current_shop)
+        if shopify_session and shopify_session.is_installed:
+            platform = "shopify"
+            shopify_domain = current_shop
+            try:
+                access_token = shopify_session.decrypt_token()
+            except Exception:
+                logger.warning(
+                    "ticket_create_token_decrypt_failed",
+                    shop=current_shop,
+                )
+                access_token = None
+
     ticket = await ticket_crud.create_ticket(
         db,
         customer_email=body.customer_email,
         issue_text=body.issue_text,
-        platform=body.platform,
+        platform=platform,
         order_id=body.order_id,
         customer_name=body.customer_name,
         attachments=body.attachments,
+        tenant_id=shopify_domain or "default",
     )
     await db.commit()
 
@@ -93,7 +121,9 @@ async def create_ticket(
     logger.info(
         "ticket_created",
         ticket_id=ticket_id,
-        platform=body.platform,
+        platform=platform,
+        shop=shopify_domain,
+        has_access_token=access_token is not None,
         issue_len=len(body.issue_text),
     )
 
@@ -101,15 +131,14 @@ async def create_ticket(
     background_tasks.add_task(
         _process_ticket_background,
         ticket_id=ticket_id,
-        platform=body.platform,
-        shopify_domain=body.customer_email.split("@")[-1]
-        if "@" in body.customer_email
-        else "unknown",
+        platform=platform,
+        shopify_domain=shopify_domain or "unknown",
         customer_email=body.customer_email,
         customer_name=body.customer_name,
         issue_text=body.issue_text,
         order_id=body.order_id,
         attachments=body.attachments,
+        access_token=access_token,
     )
 
     await db.commit()
@@ -138,13 +167,23 @@ async def list_tickets(
     page: int = Query(default=1, ge=1, description="Page number"),
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page"),
     status: str | None = Query(default=None, description="Filter by status"),
+    platform: str | None = Query(
+        default=None, description="Filter by platform (woocommerce, shopify, amazon, mock)"
+    ),
+    current_shop: str = Depends(get_optional_shop),
 ) -> dict[str, Any]:
-    """List tickets with optional status filter.
+    """List tickets with optional status and platform filters.
 
     Results are paginated and sorted by creation time (newest first).
+    When authenticated, only tickets for the current shop are returned.
     """
     items, total = await ticket_crud.list_tickets(
-        db, page=page, page_size=page_size, status=status,
+        db,
+        page=page,
+        page_size=page_size,
+        status=status,
+        platform=platform,
+        tenant_id=current_shop or None,
     )
 
     ticket_dicts = [ticket_crud.ticket_to_dict(t) for t in items]
@@ -211,12 +250,23 @@ async def get_ticket_status(
     # Build pending approval if applicable
     pending_approval = None
     if ticket.requires_approval or ticket.status == "pending_approval":
+        sla_remaining = None
+        sla_breached = False
+        deadline_iso = None
+        if ticket.sla_deadline:
+            now = datetime.now(UTC)
+            remaining = (ticket.sla_deadline - now).total_seconds()
+            sla_remaining = max(0, int(remaining))
+            sla_breached = remaining <= 0
+            deadline_iso = ticket.sla_deadline.isoformat()
         pending_approval = {
             "action": ticket.recommended_action or "unknown",
             "amount": ticket.refund_amount,
             "reason": ticket.refund_reason or "",
             "decision_explanation": ticket.decision_explanation or "",
-            "deadline": None,
+            "deadline": deadline_iso,
+            "sla_remaining_seconds": sla_remaining,
+            "sla_breached": sla_breached,
         }
 
     return {
@@ -239,14 +289,15 @@ async def get_ticket_status(
 @router.post("/{ticket_id}/approve", response_model=ApprovalResponse)
 async def approve_ticket(
     ticket_id: str,
-    body: ApprovalRequest = ...,
-    db: DBSession = None,
+    body: ApprovalRequest,
+    db: OptionalDBSession = None,
 ) -> dict[str, Any]:
     """Approve a ticket that is pending human review.
 
     Upon approval, the agent continues execution and processes the
     refund/exchange.
     """
+    assert db is not None  # OptionalDBSession guaranteed by FastAPI DI
     ticket = await ticket_crud.get_ticket(db, ticket_id)
     if not ticket:
         raise _ticket_not_found(ticket_id)
@@ -257,6 +308,7 @@ async def approve_ticket(
             detail=f"Ticket is not pending approval (current status: {ticket.status})",
         )
 
+    assert db is not None  # OptionalDBSession guaranteed by FastAPI DI
     try:
         state = ticket_crud.ticket_to_dict(ticket)
         result = await (await _get_agent_service()).resume(
@@ -270,9 +322,7 @@ async def approve_ticket(
 
     except Exception as e:
         logger.error("ticket_approve_failed", ticket_id=ticket_id, error=str(e)[:200])
-        raise HTTPException(
-            status_code=500, detail=f"Failed to process approval: {e!s}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to process approval: {e!s}") from e
 
     # Re-read to get updated status
     ticket = await ticket_crud.get_ticket(db, ticket_id)
@@ -295,13 +345,14 @@ async def approve_ticket(
 @router.post("/{ticket_id}/reject", response_model=ApprovalResponse)
 async def reject_ticket(
     ticket_id: str,
-    body: ApprovalRequest = ...,
-    db: DBSession = None,
+    body: ApprovalRequest,
+    db: OptionalDBSession = None,
 ) -> dict[str, Any]:
     """Reject a ticket that is pending human review.
 
     Upon rejection, the ticket is escalated for manual handling.
     """
+    assert db is not None  # OptionalDBSession guaranteed by FastAPI DI
     ticket = await ticket_crud.get_ticket(db, ticket_id)
     if not ticket:
         raise _ticket_not_found(ticket_id)
@@ -312,6 +363,7 @@ async def reject_ticket(
             detail=f"Ticket is not pending approval (current status: {ticket.status})",
         )
 
+    assert db is not None  # OptionalDBSession guaranteed by FastAPI DI
     try:
         state = ticket_crud.ticket_to_dict(ticket)
         result = await (await _get_agent_service()).resume(
@@ -325,9 +377,7 @@ async def reject_ticket(
 
     except Exception as e:
         logger.error("ticket_reject_failed", ticket_id=ticket_id, error=str(e)[:200])
-        raise HTTPException(
-            status_code=500, detail=f"Failed to process rejection: {e!s}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to process rejection: {e!s}") from e
 
     ticket = await ticket_crud.get_ticket(db, ticket_id)
     return {
@@ -349,9 +399,10 @@ async def reject_ticket(
 @router.post("/{ticket_id}/cancel")
 async def cancel_ticket(
     ticket_id: str,
-    db: DBSession = None,
+    db: OptionalDBSession = None,
 ) -> dict[str, Any]:
     """Cancel a ticket that is currently processing."""
+    assert db is not None  # OptionalDBSession guaranteed by FastAPI DI
     ticket = await ticket_crud.get_ticket(db, ticket_id)
     if not ticket:
         raise _ticket_not_found(ticket_id)
@@ -363,11 +414,16 @@ async def cancel_ticket(
             detail=f"Ticket cannot be cancelled (current status: {ticket.status})",
         )
 
-    await ticket_crud.update_ticket(db, ticket_id, {
-        "status": "failed",
-        "recommended_action": "escalate_to_human",
-        "decision_explanation": "Cancelled by user",
-    })
+    assert db is not None  # OptionalDBSession guaranteed by FastAPI DI
+    await ticket_crud.update_ticket(
+        db,
+        ticket_id,
+        {
+            "status": "failed",
+            "recommended_action": "escalate_to_human",
+            "decision_explanation": "Cancelled by user",
+        },
+    )
     await db.commit()
 
     logger.info("ticket_cancelled", ticket_id=ticket_id)
@@ -391,6 +447,20 @@ async def get_dashboard_stats(db: DBSession) -> dict[str, Any]:
     return {"code": 0, "data": stats}
 
 
+@router.get("/stats/metrics")
+async def get_ticket_metrics(
+    db: DBSession,
+    days: int = Query(default=30, ge=1, le=90, description="Number of days to include"),
+) -> dict[str, Any]:
+    """Get time-series metrics for monitoring dashboard charts.
+
+    Returns processing rate, LLM cost, auto-resolve trend, and SLA
+    compliance data for the requested time window.
+    """
+    metrics = await ticket_crud.get_ticket_metrics(db, days=days)
+    return {"code": 0, "data": metrics}
+
+
 # =============================================================================
 # Background Processing
 # =============================================================================
@@ -405,6 +475,7 @@ async def _process_ticket_background(
     customer_name: str | None = None,
     order_id: str | None = None,
     attachments: list[str] | None = None,
+    access_token: str | None = None,
 ) -> None:
     """Run the agent in background and persist the result to the database.
 
@@ -423,6 +494,7 @@ async def _process_ticket_background(
             order_id=order_id,
             customer_name=customer_name,
             attachments=attachments,
+            access_token=access_token,
         )
 
         # Persist result to database
@@ -451,11 +523,15 @@ async def _process_ticket_background(
         # Persist failure
         async with AsyncSessionLocal() as db:
             try:
-                await ticket_crud.update_ticket(db, ticket_id, {
-                    "status": "failed",
-                    "error_message": str(e)[:1000],
-                    "recommended_action": "escalate_to_human",
-                })
+                await ticket_crud.update_ticket(
+                    db,
+                    ticket_id,
+                    {
+                        "status": "failed",
+                        "error_message": str(e)[:1000],
+                        "recommended_action": "escalate_to_human",
+                    },
+                )
                 await db.commit()
             except Exception:
                 await db.rollback()
@@ -503,11 +579,13 @@ def _build_step_list(ticket: dict[str, Any]) -> list[dict[str, Any]]:
             done = False
             result = None
 
-        steps.append({
-            "step": step_name,
-            "status": "done" if done else "pending",
-            "result": result,
-        })
+        steps.append(
+            {
+                "step": step_name,
+                "status": "done" if done else "pending",
+                "result": result,
+            }
+        )
 
     return steps
 

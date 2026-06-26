@@ -1,10 +1,5 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Wifi, WifiOff } from "lucide-react";
-import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
 import { ApprovalPanel } from "@/components/tickets/approval-panel";
 import { StepTimeline } from "@/components/tickets/step-timeline";
 import { useApprovalStore } from "@/lib/store";
@@ -16,6 +11,11 @@ import {
 	rejectTicket,
 } from "@/lib/tickets";
 import { useWebSocket } from "@/lib/use-websocket";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Wifi, WifiOff } from "lucide-react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useState } from "react";
 
 const STATUS_COLORS: Record<string, string> = {
 	received: "bg-slate-100 text-slate-700",
@@ -248,7 +248,7 @@ export default function TicketDetailPage() {
 						<h3 className="text-sm font-semibold text-slate-700 mb-3">
 							Agent Analysis
 						</h3>
-						<div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+						<div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-sm">
 							<div>
 								<dt className="text-slate-400 text-xs">Intent</dt>
 								<dd className="text-slate-900 font-medium mt-0.5 capitalize">
@@ -273,6 +273,12 @@ export default function TicketDetailPage() {
 								<dt className="text-slate-400 text-xs">Sentiment</dt>
 								<dd className="text-slate-900 font-medium mt-0.5 capitalize">
 									{ticket.sentiment ?? "—"}
+								</dd>
+							</div>
+							<div>
+								<dt className="text-slate-400 text-xs">Language</dt>
+								<dd className="text-slate-900 font-medium mt-0.5 uppercase">
+									{ticket.issue_language ?? "—"}
 								</dd>
 							</div>
 						</div>

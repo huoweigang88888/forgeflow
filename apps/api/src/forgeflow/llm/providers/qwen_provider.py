@@ -96,7 +96,7 @@ class QwenProvider(OpenAIProvider):
     async def complete_structured(
         self,
         prompt: str,
-        output_schema: dict,
+        output_schema: dict[str, Any],
         **kwargs: Any,
     ) -> LLMCallResult:
         """Send a prompt expecting structured JSON output.

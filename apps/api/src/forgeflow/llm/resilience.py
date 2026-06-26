@@ -51,7 +51,7 @@ class LLMResilienceWrapper:
         self,
         provider: str,
         model: str,
-        fallback_value: dict,
+        fallback_value: dict[str, Any],
     ) -> None:
         self.provider_name = provider
         self.model = model
@@ -60,7 +60,7 @@ class LLMResilienceWrapper:
     async def call(
         self,
         prompt: str,
-        output_schema: dict | None = None,
+        output_schema: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> LLMCallResult:
         """Execute an LLM call with 3-layer resilience.
@@ -204,13 +204,13 @@ class LLMResilienceWrapper:
         self,
         provider: Any,
         prompt: str,
-        output_schema: dict,
+        output_schema: dict[str, Any],
         **kwargs: Any,
     ) -> LLMCallResult:
         """Call complete_structured with retry on transient failures."""
         return await provider.complete_structured(prompt, output_schema, **kwargs)
 
-    def _regex_extract(self, raw_text: str) -> dict | None:
+    def _regex_extract(self, raw_text: str) -> dict[str, Any] | None:
         """Try to extract structured data from non-standard LLM output.
 
         Handles common LLM output quirks:
@@ -251,7 +251,7 @@ class LLMResilienceWrapper:
         return None
 
     @staticmethod
-    def _safe_json_parse(text: str) -> dict | None:
+    def _safe_json_parse(text: str) -> dict[str, Any] | None:
         """Safely attempt to parse JSON, returning None on failure."""
         try:
             return json.loads(text)

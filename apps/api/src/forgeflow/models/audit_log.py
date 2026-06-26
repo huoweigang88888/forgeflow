@@ -22,12 +22,16 @@ class AuditLog(Base, UUIDMixin):
     tenant_id: Mapped[str] = mapped_column(
         String(255), nullable=False, index=True, doc="Shopify domain"
     )
-    actor_id: Mapped[str | None] = mapped_column(String(100), doc="User ID who performed the action")
+    actor_id: Mapped[str | None] = mapped_column(
+        String(100), doc="User ID who performed the action"
+    )
     actor_role: Mapped[str | None] = mapped_column(String(50), doc="admin | manager | agent")
 
     # --- Action ---
     action: Mapped[str] = mapped_column(
-        String(100), nullable=False, index=True,
+        String(100),
+        nullable=False,
+        index=True,
         doc="ticket.approve | refund.execute | settings.update | policy.create",
     )
     resource_type: Mapped[str | None] = mapped_column(

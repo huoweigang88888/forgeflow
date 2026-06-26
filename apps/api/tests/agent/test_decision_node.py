@@ -176,7 +176,67 @@ async def test_decision_lost_shipment_requires_approval():
 
 
 # =============================================================================
-# Hard Rule 4: "other" intent → escalate
+# Hard Rule 4b: pre_sale_inquiry → send_notification
+# =============================================================================
+
+
+@pytest.mark.asyncio
+async def test_decision_pre_sale_inquiry_notify():
+    """Pre-sale inquiry → send_notification (no order context)."""
+    state = _make_state(intent="pre_sale_inquiry")
+    result = await make_decision_node(state)
+
+    assert result["recommended_action"] == "send_notification"
+    assert result["requires_approval"] is False
+    assert result["refund_amount"] == 0.0
+
+
+# =============================================================================
+# Hard Rule 4c: subscription_cancel → auto_refund with approval
+# =============================================================================
+
+
+@pytest.mark.asyncio
+async def test_decision_subscription_cancel_requires_approval():
+    """Subscription cancel → auto_refund with approval."""
+    state = _make_state(
+        intent="subscription_cancel",
+        fulfillment_status="fulfilled",
+        total_price=29.99,
+        logistics_status="delivered",
+    )
+    result = await make_decision_node(state)
+
+    assert result["recommended_action"] == "auto_refund"
+    assert result["requires_approval"] is True
+    assert result["approval_reason"] is not None
+    assert "subscription" in result.get("approval_reason", "").lower()
+
+
+# =============================================================================
+# Hard Rule 4d: partial_refund → auto_refund with approval
+# =============================================================================
+
+
+@pytest.mark.asyncio
+async def test_decision_partial_refund_requires_approval():
+    """Partial refund → auto_refund with approval (default 50%)."""
+    state = _make_state(
+        intent="partial_refund",
+        fulfillment_status="fulfilled",
+        total_price=80.00,
+        logistics_status="delivered",
+    )
+    result = await make_decision_node(state)
+
+    assert result["recommended_action"] == "auto_refund"
+    assert result["requires_approval"] is True
+    # Default 50% of 80.00 = 40.00
+    assert result["refund_amount"] == 40.00
+
+
+# =============================================================================
+# Hard Rule 5: "other" intent → escalate
 # =============================================================================
 
 
@@ -224,6 +284,6 @@ async def test_decision_approval_reason_set_when_required():
     result = await make_decision_node(state)
 
     if result["requires_approval"]:
-        assert result.get("approval_reason"), (
-            "approval_reason must be set when requires_approval is True"
-        )
+        assert result.get(
+            "approval_reason"
+        ), "approval_reason must be set when requires_approval is True"

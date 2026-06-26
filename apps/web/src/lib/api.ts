@@ -2,8 +2,9 @@
  * ForgeFlow API Client.
  *
  * Thin wrapper around fetch() with JWT auth, JSON handling, and error mapping.
- * Phase 0: Basic structure. Phase 1+: Full JWT integration + interceptors.
  */
+
+import { useAuthStore } from "./auth-store";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -33,15 +34,17 @@ async function request<T>(
 ): Promise<T> {
 	const url = `${API_BASE_URL}${endpoint}`;
 
-	const headers: HeadersInit = {
+	const headers: Record<string, string> = {
 		"Content-Type": "application/json",
 		"X-Request-ID": crypto.randomUUID(),
-		...options.headers,
+		...options.headers as Record<string, string>,
 	};
 
-	// Phase 1+: Add JWT token from auth store
-	// const token = useAuthStore.getState().token;
-	// if (token) headers["Authorization"] = `Bearer ${token}`;
+	// Inject JWT from auth store (set by Shopify OAuth flow)
+	const token = useAuthStore.getState().token;
+	if (token) {
+		headers["Authorization"] = `Bearer ${token}`;
+	}
 
 	const response = await fetch(url, {
 		...options,

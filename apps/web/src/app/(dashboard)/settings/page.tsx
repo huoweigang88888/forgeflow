@@ -1,11 +1,15 @@
 "use client";
 
+import ShopifyOAuth from "@/components/settings/shopify-oauth";
+import { useAuthStore } from "@/lib/auth-store";
 import { useState } from "react";
 
 export default function SettingsPage() {
 	const [autoRefundThreshold, setAutoRefundThreshold] = useState("50");
 	const [platform, setPlatform] = useState("mock");
 	const [saved, setSaved] = useState(false);
+	const { token, shopDomain } = useAuthStore();
+	const isAuthenticated = !!token && !!shopDomain;
 
 	const handleSave = () => {
 		setSaved(true);
@@ -19,26 +23,20 @@ export default function SettingsPage() {
 				Configure your store, policies, and automation rules.
 			</p>
 
+			{/* Shopify Connection (OAuth) */}
+			<section className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+				<h2 className="text-lg font-semibold text-slate-800 mb-4">
+					Store Connection
+				</h2>
+				<ShopifyOAuth />
+			</section>
+
 			{/* Store Configuration */}
 			<section className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
 				<h2 className="text-lg font-semibold text-slate-800 mb-4">
 					Store Configuration
 				</h2>
 				<div className="space-y-4">
-					<div>
-						<label
-							htmlFor="shopify-domain"
-							className="block text-sm font-medium text-slate-700 mb-1"
-						>
-							Shopify Domain
-						</label>
-						<input
-							id="shopify-domain"
-							type="text"
-							defaultValue="test.myshopify.com"
-							className="w-full max-w-md rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-						/>
-					</div>
 					<div>
 						<label
 							htmlFor="platform-select"
@@ -53,7 +51,7 @@ export default function SettingsPage() {
 							className="w-full max-w-md rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
 						>
 							<option value="mock">Mock (Testing)</option>
-							<option value="shopify">Shopify</option>
+							<option value="shopify">Shopify (Live)</option>
 						</select>
 					</div>
 				</div>
@@ -167,11 +165,26 @@ export default function SettingsPage() {
 					API Connection
 				</h2>
 				<div className="flex items-center gap-2">
-					<span className="flex h-3 w-3">
-						<span className="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-green-400 opacity-75" />
-						<span className="relative inline-flex rounded-full h-3 w-3 bg-green-500" />
-					</span>
-					<span className="text-sm text-green-700 font-medium">Connected</span>
+					{isAuthenticated ? (
+						<>
+							<span className="flex h-3 w-3">
+								<span className="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-green-400 opacity-75" />
+								<span className="relative inline-flex rounded-full h-3 w-3 bg-green-500" />
+							</span>
+							<span className="text-sm text-green-700 font-medium">
+								Authenticated — {shopDomain}
+							</span>
+						</>
+					) : (
+						<>
+							<span className="flex h-3 w-3">
+								<span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500" />
+							</span>
+							<span className="text-sm text-slate-500 font-medium">
+								Not connected — connect a Shopify store above
+							</span>
+						</>
+					)}
 					<span className="text-xs text-slate-400 ml-2">
 						API: localhost:8000 | WS: localhost:8000/ws
 					</span>

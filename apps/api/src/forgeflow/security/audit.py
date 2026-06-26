@@ -6,6 +6,7 @@ Implements PRD Section 19.3: Audit Logs.
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any
 
 
 @dataclass
@@ -18,7 +19,7 @@ class AuditEvent:
     action: str  # "ticket.approve", "refund.execute", "gdpr.forget"
     resource_type: str  # "ticket", "order", "policy", "customer"
     resource_id: str
-    details: dict = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict)
     ip_address: str = "unknown"
     user_agent: str = "unknown"
     created_at: datetime = field(default_factory=datetime.utcnow)

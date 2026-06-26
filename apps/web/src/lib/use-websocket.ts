@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
 import type { TicketStatus, WSEvent } from "@/types";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface UseWebSocketOptions {
 	ticketId: string;

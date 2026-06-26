@@ -49,7 +49,8 @@ class LLMCall(Base, UUIDMixin):
 
     # --- Status ---
     status: Mapped[str] = mapped_column(
-        String(50), default="success",
+        String(50),
+        default="success",
         doc="success | json_parse_error | fallback_used | failed",
     )
     error_message: Mapped[str | None] = mapped_column(Text)

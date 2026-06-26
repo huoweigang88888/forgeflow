@@ -11,6 +11,7 @@ Usage:
 """
 
 import re
+import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -61,9 +62,7 @@ class GDRPService:
     # Art.15: Data Export
     # ------------------------------------------------------------------
 
-    async def export_customer_data(
-        self, customer_email: str, tenant_id: str
-    ) -> GDRPExportResult:
+    async def export_customer_data(self, customer_email: str, tenant_id: str) -> GDRPExportResult:
         """Export all data associated with a customer email.
 
         Collects:
@@ -84,7 +83,7 @@ class GDRPService:
 
         customer_data = []
         for customer in customers:
-            customer_entry = {
+            customer_entry: dict[str, Any] = {
                 "customer_id": str(customer.id),
                 "first_name": customer.first_name,
                 "last_name": customer.last_name,
@@ -237,15 +236,17 @@ class GDRPService:
 
         # Purge old LLM call records
         from forgeflow.models.llm_call import LLMCall
+
         result = await self.db.execute(
             update(LLMCall)
             .where(LLMCall.created_at < cutoff_date)
             .values(prompt="[PURGED — retention policy]", response="[PURGED]")
         )
-        deleted["llm_calls_purged"] = result.rowcount
+        deleted["llm_calls_purged"] = result.rowcount  # type: ignore[attr-defined]
 
         # Purge old agent logs
         from forgeflow.models.agent_log import AgentLog
+
         result = await self.db.execute(
             update(AgentLog)
             .where(AgentLog.created_at < cutoff_date)
@@ -254,7 +255,7 @@ class GDRPService:
                 output_data={"purged": True},
             )
         )
-        deleted["agent_logs_purged"] = result.rowcount
+        deleted["agent_logs_purged"] = result.rowcount  # type: ignore[attr-defined]
 
         await self.db.commit()
 
@@ -271,9 +272,7 @@ class GDRPService:
     # Helpers
     # ------------------------------------------------------------------
 
-    async def _get_customers_by_email(
-        self, email: str, tenant_id: str
-    ) -> list[Customer]:
+    async def _get_customers_by_email(self, email: str, tenant_id: str) -> list[Customer]:
         """Find all customer records by email within a tenant."""
         stmt = select(Customer).where(
             Customer.email == email,
@@ -282,9 +281,7 @@ class GDRPService:
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
-    async def _get_orders_for_customer(
-        self, customer_id, tenant_id: str
-    ) -> list[Order]:
+    async def _get_orders_for_customer(self, customer_id: uuid.UUID, tenant_id: str) -> list[Order]:
         """Get all orders for a customer."""
         stmt = select(Order).where(
             Order.customer_id == customer_id,
@@ -294,7 +291,7 @@ class GDRPService:
         return list(result.scalars().all())
 
     async def _get_tickets_for_customer(
-        self, customer_id, tenant_id: str
+        self, customer_id: uuid.UUID, tenant_id: str
     ) -> list[Ticket]:
         """Get all tickets for a customer."""
         stmt = select(Ticket).where(
@@ -310,24 +307,23 @@ class GDRPService:
 
         Redacts: email addresses, phone numbers, physical addresses.
         """
-        import re
 
         # Email addresses
         text = re.sub(
-            r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',
-            '[REDACTED_EMAIL]',
+            r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
+            "[REDACTED_EMAIL]",
             text,
         )
         # Phone numbers (various formats)
         text = re.sub(
-            r'(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}',
-            '[REDACTED_PHONE]',
+            r"(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}",
+            "[REDACTED_PHONE]",
             text,
         )
         # Street addresses (heuristic)
         text = re.sub(
-            r'\d{1,5}\s+\w+\s+(?:street|st|avenue|ave|road|rd|drive|dr|lane|ln|blvd|boulevard|way|court|ct)',
-            '[REDACTED_ADDRESS]',
+            r"\d{1,5}\s+\w+\s+(?:street|st|avenue|ave|road|rd|drive|dr|lane|ln|blvd|boulevard|way|court|ct)",
+            "[REDACTED_ADDRESS]",
             text,
             flags=re.IGNORECASE,
         )

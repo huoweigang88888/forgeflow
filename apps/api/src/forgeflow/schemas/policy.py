@@ -7,7 +7,6 @@ Matches the policy_documents table from the initial schema migration.
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # ── Request Schemas ──
 
 
@@ -180,3 +179,71 @@ class PolicyDeleteResponse(BaseModel):
     code: int = 0
     message: str = "Policy deleted"
     data: dict = Field(default_factory=lambda: {"id": ""})
+
+
+# ── File Upload ──
+
+
+class PolicyFileUploadResponse(BaseModel):
+    """Response after uploading a policy file."""
+
+    code: int = 0
+    message: str = "File uploaded"
+    data: dict = Field(
+        default_factory=lambda: {
+            "source_document_id": "",
+            "chunk_count": 0,
+            "total_chars": 0,
+        }
+    )
+
+
+# ── Chunk Preview ──
+
+
+class ChunkPreview(BaseModel):
+    """A single chunk preview for the chunk list endpoint."""
+
+    chunk_index: int
+    title: str
+    preview_text: str
+    char_count: int
+    has_embedding: bool
+    policy_id: str
+
+
+class ChunkListResponse(BaseModel):
+    """Response for listing chunks of a source document."""
+
+    code: int = 0
+    data: dict = Field(
+        default_factory=lambda: {
+            "chunks": [],
+            "source_document_id": "",
+            "total_chunks": 0,
+        }
+    )
+
+
+# ── Text / Hybrid Search ──
+
+
+class TextSearchRequest(BaseModel):
+    """Full-text search over policy documents."""
+
+    query: str = Field(..., min_length=1, max_length=1000)
+    category: str | None = Field(default=None, max_length=100)
+    limit: int = Field(default=10, ge=1, le=50)
+    shopify_domain: str = Field(default="default", max_length=255)
+
+
+class HybridSearchRequest(BaseModel):
+    """Hybrid semantic + full-text search over policy documents."""
+
+    query: str = Field(..., min_length=1, max_length=1000)
+    category: str | None = Field(default=None, max_length=100)
+    limit: int = Field(default=10, ge=1, le=50)
+    threshold: float = Field(default=0.1, ge=0.0, le=1.0)
+    similarity_weight: float = Field(default=0.7, ge=0.0, le=1.0)
+    keyword_weight: float = Field(default=0.3, ge=0.0, le=1.0)
+    shopify_domain: str = Field(default="default", max_length=255)

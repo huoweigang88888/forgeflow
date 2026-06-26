@@ -10,6 +10,7 @@ including those from CORS, error handlers, and other middleware.
 """
 
 import time
+from collections.abc import Awaitable, Callable
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -27,7 +28,9 @@ class HTTPMetricsMiddleware(BaseHTTPMiddleware):
     Skips the /api/metrics endpoint to avoid infinite metric recursion.
     """
 
-    async def dispatch(self, request: Request, call_next) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         # Skip metrics endpoint itself to avoid inflating its own metrics
         if request.url.path == "/api/metrics":
             return await call_next(request)

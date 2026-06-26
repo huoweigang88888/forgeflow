@@ -40,7 +40,7 @@ async def handle_error_node(state: AgentState) -> dict[str, Any]:
     """
     ticket_id = state.get("ticket_id", "unknown")
     current_step = state.get("current_step", "unknown")
-    error_message = state.get("error_message", "Unknown error")
+    error_message = state.get("error_message") or "Unknown error"
     retry_count = state.get("retry_count", 0)
     config = NODE_RETRY_CONFIGS.get(current_step)
 

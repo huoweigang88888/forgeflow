@@ -5,8 +5,10 @@ Provides FastAPI dependency for async database sessions with
 automatic commit on success and rollback on error.
 """
 
+from __future__ import annotations
+
 from collections.abc import AsyncGenerator
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import Depends
 from redis.asyncio import Redis
@@ -40,15 +42,18 @@ get_session = get_db
 # Type alias for FastAPI dependency injection
 DBSession = Annotated[AsyncSession, Depends(get_db)]
 
+# Optional variant — for endpoints that allow None (webhooks, etc.)
+OptionalDBSession = Annotated[AsyncSession | None, Depends(get_db)]
+
 
 # ------------------------------------------------------------------
 # Redis Client
 # ------------------------------------------------------------------
 
-_redis_client: Redis | None = None
+_redis_client: Redis[Any] | None = None
 
 
-async def get_redis_client() -> Redis:
+async def get_redis_client() -> Redis[Any]:
     """Return a shared Redis async client (lazy singleton).
 
     Usage:

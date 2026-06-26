@@ -10,9 +10,9 @@ Usage:
     rendered = prompt.render(issue="...", order_id="...")
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, ClassVar
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -65,7 +65,7 @@ class PromptRegistry:
     """
 
     # Fallback templates (used when database is unavailable)
-    FALLBACK_TEMPLATES: dict[str, str] = {
+    FALLBACK_TEMPLATES: ClassVar[dict[str, str]] = {
         "intent_detection": (
             "Classify: {issue}\nOrder: {order_id}\n"
             "Return JSON: {{intent, confidence, urgency, sentiment}}"
@@ -136,9 +136,7 @@ class PromptRegistry:
             model="deepseek-chat",
         )
 
-    async def get_version(
-        self, prompt_name: str, version: str
-    ) -> RenderedPrompt | None:
+    async def get_version(self, prompt_name: str, version: str) -> RenderedPrompt | None:
         """Get a specific version of a prompt."""
         stmt = select(PromptVersion).where(
             PromptVersion.prompt_name == prompt_name,
@@ -161,9 +159,7 @@ class PromptRegistry:
     # A/B Testing
     # ------------------------------------------------------------------
 
-    async def get_for_ticket(
-        self, prompt_name: str, ticket_id: str
-    ) -> RenderedPrompt:
+    async def get_for_ticket(self, prompt_name: str, ticket_id: str) -> RenderedPrompt:
         """Get prompt for a ticket, respecting active A/B test routing.
 
         Hash-based deterministic routing ensures the same ticket always
@@ -181,9 +177,13 @@ class PromptRegistry:
         is_variant = (hash_val % 100) < int(ab_test["traffic_split"] * 100)
 
         if is_variant:
-            return await self.get_version(prompt_name, ab_test["variant_version"])
+            result = await self.get_version(prompt_name, ab_test["variant_version"])
+        else:
+            result = await self.get_version(prompt_name, ab_test["control_version"])
 
-        return await self.get_version(prompt_name, ab_test["control_version"])
+        if result is None:
+            return await self.get_active(prompt_name)
+        return result
 
     # ------------------------------------------------------------------
     # Version Management
@@ -256,8 +256,7 @@ class PromptRegistry:
 
         if target_pv is None:
             raise ValueError(
-                f"Prompt '{prompt_name}' version '{to_version}' not found. "
-                f"Cannot rollback."
+                f"Prompt '{prompt_name}' version '{to_version}' not found. Cannot rollback."
             )
 
         # Deactivate current
@@ -345,7 +344,7 @@ class PromptRegistry:
     # A/B Test State (stored in Redis in production, in-memory for now)
     # ------------------------------------------------------------------
 
-    _ab_tests: dict[str, dict[str, Any]] = {}
+    _ab_tests: ClassVar[dict[str, dict[str, Any]]] = {}
 
     async def start_ab_test(
         self,
@@ -377,9 +376,7 @@ class PromptRegistry:
         self._ab_tests.pop(prompt_name, None)
         logger.info("ab_test_stopped", prompt_name=prompt_name)
 
-    async def _get_active_ab_test(
-        self, prompt_name: str
-    ) -> dict[str, Any] | None:
+    async def _get_active_ab_test(self, prompt_name: str) -> dict[str, Any] | None:
         """Get active A/B test config, if any."""
         return self._ab_tests.get(prompt_name)
 

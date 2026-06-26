@@ -7,7 +7,7 @@ The Agent Runtime uses this to resolve the correct provider for each tenant.
 From PRD Section 17.3: Provider Registry.
 """
 
-from typing import Any
+from typing import Any, ClassVar
 
 from forgeflow.providers.base import PlatformProvider
 
@@ -28,7 +28,7 @@ class ProviderRegistry:
         order = await provider.get_order("12345")
     """
 
-    _providers: dict[str, type[PlatformProvider]] = {}
+    _providers: ClassVar[dict[str, type[PlatformProvider]]] = {}
 
     @classmethod
     def register(cls, name: str, provider_cls: type[PlatformProvider]) -> None:
@@ -44,13 +44,10 @@ class ProviderRegistry:
         """
         if name in cls._providers:
             raise ValueError(
-                f"Provider '{name}' already registered. "
-                f"Available: {list(cls._providers.keys())}"
+                f"Provider '{name}' already registered. Available: {list(cls._providers.keys())}"
             )
         if not issubclass(provider_cls, PlatformProvider):
-            raise TypeError(
-                f"{provider_cls.__name__} must implement PlatformProvider"
-            )
+            raise TypeError(f"{provider_cls.__name__} must implement PlatformProvider")
         cls._providers[name] = provider_cls
 
     @classmethod
@@ -69,10 +66,7 @@ class ProviderRegistry:
         """
         if name not in cls._providers:
             available = list(cls._providers.keys())
-            raise ValueError(
-                f"Unknown platform '{name}'. "
-                f"Available providers: {available}"
-            )
+            raise ValueError(f"Unknown platform '{name}'. Available providers: {available}")
         return cls._providers[name](**kwargs)
 
     @classmethod

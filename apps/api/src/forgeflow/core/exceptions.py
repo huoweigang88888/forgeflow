@@ -10,7 +10,9 @@ from typing import Any
 class ForgeFlowError(Exception):
     """Base exception for all ForgeFlow errors."""
 
-    def __init__(self, message: str, *, code: str = "INTERNAL_ERROR", details: dict[str, Any] | None = None):
+    def __init__(
+        self, message: str, *, code: str = "INTERNAL_ERROR", details: dict[str, Any] | None = None
+    ):
         self.message = message
         self.code = code
         self.details = details or {}
@@ -18,6 +20,7 @@ class ForgeFlowError(Exception):
 
 
 # --- Resource Errors ---
+
 
 class NotFoundError(ForgeFlowError):
     """Requested resource does not exist."""
@@ -43,6 +46,7 @@ class AlreadyExistsError(ForgeFlowError):
 
 # --- Auth Errors ---
 
+
 class AuthenticationError(ForgeFlowError):
     """Authentication failed."""
 
@@ -58,6 +62,7 @@ class PermissionDeniedError(ForgeFlowError):
 
 
 # --- Provider Errors ---
+
 
 class ProviderError(ForgeFlowError):
     """External provider (Shopify, Logistics) error."""
@@ -84,6 +89,7 @@ class ProviderTimeoutError(ProviderError):
 
 # --- LLM Errors ---
 
+
 class LLMError(ForgeFlowError):
     """LLM provider error."""
 
@@ -108,6 +114,7 @@ class LLMParseError(LLMError):
 
 # --- Validation Errors ---
 
+
 class ValidationError(ForgeFlowError):
     """Input validation failed."""
 
@@ -120,6 +127,7 @@ class ValidationError(ForgeFlowError):
 
 
 # --- Agent Errors ---
+
 
 class AgentError(ForgeFlowError):
     """Agent runtime error."""

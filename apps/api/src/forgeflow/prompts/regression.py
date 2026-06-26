@@ -19,7 +19,6 @@ from typing import Any
 import yaml
 
 from forgeflow.llm.base import LLMProvider
-from forgeflow.llm.resilience import LLMResilienceWrapper
 from forgeflow.monitoring.logger import get_logger
 
 logger = get_logger(component="evaluation.prompts")
@@ -99,9 +98,7 @@ class PromptRegressionRunner:
         passed = sum(1 for r in results if r.passed)
         failed = total - passed
         accuracy = round(passed / total, 4) if total > 0 else 0.0
-        avg_latency = (
-            sum(r.duration_ms for r in results) / total if total > 0 else 0.0
-        )
+        avg_latency = sum(r.duration_ms for r in results) / total if total > 0 else 0.0
 
         report = PromptTestReport(
             prompt_name=prompt_name,
@@ -127,9 +124,7 @@ class PromptRegressionRunner:
 
         return report
 
-    async def _run_single(
-        self, template: str, case: PromptTestCase
-    ) -> PromptTestResult:
+    async def _run_single(self, template: str, case: PromptTestCase) -> PromptTestResult:
         """Run a single test case."""
         start = time.perf_counter()
         failures: list[str] = []
@@ -149,18 +144,14 @@ class PromptRegressionRunner:
                     # Numeric minimum check: confidence_min -> confidence >= value
                     actual_field = field[:-4]  # Strip '_min'
                     actual_val = actual.get(actual_field, 0)
-                    if isinstance(actual_val, (int, float)) and actual_val < expected_value:
-                        failures.append(
-                            f"{actual_field}={actual_val} < min {expected_value}"
-                        )
+                    if isinstance(actual_val, int | float) and actual_val < expected_value:
+                        failures.append(f"{actual_field}={actual_val} < min {expected_value}")
                 elif field.endswith("_contains"):
                     # String contains check
                     actual_field = field[:-9]
                     actual_val = str(actual.get(actual_field, ""))
                     if expected_value not in actual_val:
-                        failures.append(
-                            f"{actual_field} does not contain '{expected_value}'"
-                        )
+                        failures.append(f"{actual_field} does not contain '{expected_value}'")
                 elif field in actual:
                     if actual[field] != expected_value:
                         failures.append(
@@ -187,17 +178,19 @@ class PromptRegressionRunner:
     @staticmethod
     def load_cases(yaml_path: Path) -> list[PromptTestCase]:
         """Load test cases from a YAML file."""
-        with open(yaml_path, "r", encoding="utf-8") as f:
+        with open(yaml_path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
 
         cases: list[PromptTestCase] = []
         for item in data.get("test_cases", []):
-            cases.append(PromptTestCase(
-                id=item["id"],
-                input=item.get("input", {}),
-                expected=item.get("expected", {}),
-                description=item.get("description", ""),
-            ))
+            cases.append(
+                PromptTestCase(
+                    id=item["id"],
+                    input=item.get("input", {}),
+                    expected=item.get("expected", {}),
+                    description=item.get("description", ""),
+                )
+            )
         return cases
 
 
@@ -207,9 +200,13 @@ def check_accuracy_threshold(report: PromptTestReport) -> bool:
     Returns True if the report passes, False otherwise.
     Prints a summary to stdout for CI consumption.
     """
-    passed = report.accuracy >= report.min_accuracy if hasattr(report, 'min_accuracy') else report.accuracy >= 0.90
+    passed = (
+        report.accuracy >= report.min_accuracy
+        if hasattr(report, "min_accuracy")
+        else report.accuracy >= 0.90
+    )
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Prompt: {report.prompt_name} v{report.version}")
     print(f"Accuracy: {report.accuracy:.1%} ({report.passed}/{report.total})")
     print(f"Avg Latency: {report.avg_latency_ms:.0f}ms")
@@ -217,11 +214,11 @@ def check_accuracy_threshold(report: PromptTestReport) -> bool:
     print(f"Result: {'PASS' if passed else 'FAIL'}")
 
     if report.failed > 0:
-        print(f"\nFailed cases:")
+        print("\nFailed cases:")
         for r in report.results:
             if not r.passed:
                 print(f"  ✗ {r.case_id}: {', '.join(r.failures)}")
 
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     return passed

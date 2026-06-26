@@ -12,6 +12,9 @@ export type TicketIntent =
 	| "wrong_item"
 	| "damaged_item"
 	| "exchange_request"
+	| "partial_refund"
+	| "subscription_cancel"
+	| "pre_sale_inquiry"
 	| "other";
 
 export type TicketStatus =
@@ -75,6 +78,8 @@ export interface PendingApproval {
 	reason: string;
 	decision_explanation: string;
 	deadline: string | null;
+	sla_remaining_seconds: number | null;
+	sla_breached: boolean;
 }
 
 export interface TicketDetail {
@@ -85,6 +90,7 @@ export interface TicketDetail {
 	customer_name: string | null;
 	order_id: string | null;
 	issue_text: string;
+	issue_language: string | null;
 	attachments: string[];
 	intent: TicketIntent | null;
 	confidence: number | null;
@@ -115,15 +121,18 @@ export interface TicketDetail {
 
 export interface TicketListItem {
 	ticket_id: string;
+	platform: string;
 	customer_email: string;
 	customer_name: string | null;
 	issue_text: string;
+	issue_language: string | null;
 	intent: TicketIntent | null;
 	status: TicketStatus;
 	recommended_action: TicketAction | null;
 	refund_amount: number | null;
 	requires_approval: boolean;
 	created_at: string;
+	sla_deadline: string | null;
 }
 
 // ── Ticket Status (REST poll) ──
@@ -284,4 +293,53 @@ export interface PolicySearchData {
 	hits: PolicySearchHit[];
 	query: string;
 	total: number;
+}
+
+// ── Ticket Metrics (Monitoring Dashboard) ──
+
+export interface ProcessingRatePoint {
+	hour: string;
+	count: number;
+}
+
+export interface LLMCostPoint {
+	date: string;
+	cost: number;
+}
+
+export interface LLMCostWeeklyPoint {
+	week_start: string;
+	cost: number;
+}
+
+export interface TrendPoint {
+	date: string;
+	rate: number;
+	total: number;
+	resolved: number;
+}
+
+export interface TicketMetrics {
+	processing_rate: ProcessingRatePoint[];
+	llm_cost_daily: LLMCostPoint[];
+	llm_cost_weekly: LLMCostWeeklyPoint[];
+	auto_resolve_trend: TrendPoint[];
+	sla_compliance_rate: number;
+	period_days: number;
+}
+
+// ── Auth / Shopify OAuth ──
+
+export interface ShopifyAuthResponse {
+	access_token: string; // ForgeFlow JWT
+	shop_domain: string;
+	scopes: string;
+	installed_at: string;
+}
+
+export interface SessionInfo {
+	authenticated: boolean;
+	shop_domain: string | null;
+	installed_at: string | null;
+	scopes: string[];
 }

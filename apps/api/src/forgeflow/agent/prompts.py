@@ -21,22 +21,30 @@ Order ID: {order_id}
 
 Classify into ONE of these categories:
 - shipping_delay: Customer complains about package being late/stuck in transit, or disputes delivery status (e.g., "marked delivered but I never got it"). Only use this if the order has ALREADY SHIPPED. If the customer says the order "hasn't shipped yet" or "hasn't been sent", that is NOT shipping_delay.
-- refund_request: Customer asks for a refund, money back, return, or cancellation of an order. Use this for standard return requests ("I changed my mind", "can I return this"), refund requests without damage/defect language, and orders that haven't shipped yet.
+- refund_request: Customer asks for a full refund, money back, return, or cancellation of an order. Use this for standard return requests ("I changed my mind", "can I return this"), and orders that haven't shipped yet.
 - wrong_item: Customer received a different product, wrong color/size/variant, or only a partial/incomplete shipment
 - damaged_item: Customer received a damaged, broken, defective, or smashed product — ALWAYS classify as damaged_item when the customer uses words like "defective", "broken", "damaged", or "smashed", even if they also ask for a refund
 - exchange_request: Customer wants to exchange for a different size/color/variant of the SAME product (not a refund)
-- other: Anything that doesn't fit the above categories — restocking questions, product inquiries, absurd or impossible requests (like "deliver to Mars"), vague single-word messages
+- partial_refund: Customer asks for a partial refund — they want to keep the item but get money back for a specific reason (e.g., "price dropped after I bought", "missing accessory", "minor defect I can live with", "late but I'll keep it"). Key distinction: customer does NOT want to return the item.
+- subscription_cancel: Customer wants to cancel a subscription, recurring order, or membership. Look for keywords like "cancel subscription", "stop recurring", "unsubscribe", "cancel my membership", "stop auto-renewal", "turn off renewal".
+- pre_sale_inquiry: Customer is asking a question BEFORE purchasing — product availability, restocking, sizing, compatibility, shipping costs, "does this work with...", "when will X be back in stock", "is this item coming back". No order has been placed yet.
+- other: Anything that doesn't fit the above categories — absurd or impossible requests (like "deliver to Mars"), vague single-word messages, or completely off-topic queries
 
 CLASSIFICATION PRIORITY RULES (apply in order):
 1. If the text says the product is defective/broken/damaged/smashed → damaged_item (overrides all below)
 2. If the text describes wrong/partial/missing items → wrong_item
-3. If the text describes package stuck in transit, late delivery of shipped order, or delivery dispute → shipping_delay
-4. If the customer asks for an exchange of size/color/variant → exchange_request
-5. If the customer asks for refund/money back/return/cancellation → refund_request
-6. Absurd, impossible, or vague requests (single words like "help") → other
+3. If the text mentions subscription/recurring/membership cancellation → subscription_cancel
+4. If the customer asks for a partial refund or compensation while keeping the item → partial_refund
+5. If the text describes package stuck in transit, late delivery of shipped order, or delivery dispute → shipping_delay
+6. If the customer asks for an exchange of size/color/variant → exchange_request
+7. If the customer asks for refund/money back/return/cancellation → refund_request
+8. If the customer asks a pre-purchase question (no order context) → pre_sale_inquiry
+9. Absurd, impossible, or vague requests (single words like "help") → other
 
 IMPORTANT: "Hasn't shipped yet" = the order was never sent → refund_request, NOT shipping_delay
 IMPORTANT: "Changed my mind, can I return it" → refund_request, NOT other
+IMPORTANT: "Can I get a partial refund since..." → partial_refund, NOT refund_request
+IMPORTANT: "I want to cancel my subscription" → subscription_cancel, NOT refund_request
 
 Also extract:
 - extracted_order_id: If an order ID is mentioned in the text, extract it; otherwise null
@@ -90,6 +98,9 @@ CRITICAL RULES:
 - For delivered orders that customer disputes as non-delivery → requires_approval MUST be true (potential fraud)
 - High-value orders (over $100) should generally require approval unless there's a clear logistics delay
 - If the logistics is delayed/lost and the item is damaged/defective → requires_approval=true for orders over $50
+- partial_refund: Customer wants to keep item but get money back → always requires_approval=true; default 50% refund, adjust based on reason
+- subscription_cancel: Customer wants to cancel subscription/recurring → requires_approval=true (manual verification needed); refund pro-rated amount
+- pre_sale_inquiry: Customer asking before purchase → send_notification with helpful answer; NO refund (no order exists)
 
 Return ONLY valid JSON:
 {{

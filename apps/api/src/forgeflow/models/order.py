@@ -4,11 +4,13 @@ ForgeFlow AI - Order Model.
 Stores e-commerce order data synced from the platform (Shopify, WooCommerce, etc.).
 """
 
+import uuid
 from datetime import datetime
 from typing import Any
 
 from sqlalchemy import DateTime, ForeignKey, Numeric, String
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from forgeflow.db.base import Base, TenantMixin, TimestampMixin, UUIDMixin
@@ -22,8 +24,8 @@ class Order(Base, UUIDMixin, TimestampMixin, TenantMixin):
     shopify_order_id: Mapped[str] = mapped_column(
         String(50), nullable=False, doc="Platform-native order ID"
     )
-    customer_id: Mapped[str | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("customers.id"), index=True
+    customer_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("customers.id"), index=True
     )
     order_number: Mapped[str | None] = mapped_column(String(50))
     total_price: Mapped[float | None] = mapped_column(Numeric(10, 2))

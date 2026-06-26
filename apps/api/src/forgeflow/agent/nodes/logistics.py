@@ -17,6 +17,21 @@ from forgeflow.providers.registry import ProviderRegistry
 logger = get_logger(component="agent.logistics")
 
 
+def _build_provider_kwargs(state: AgentState) -> dict[str, Any]:
+    """Build the kwargs dict for ProviderRegistry.get() from agent state."""
+    kwargs: dict[str, Any] = {}
+    # mock_overrides only applies to MockPlatformProvider
+    if state.get("platform", "mock") == "mock":
+        kwargs["mock_overrides"] = state.get("mock_overrides", {})
+    shop_domain = state.get("shopify_domain", "")
+    access_token = state.get("access_token", "")
+    if shop_domain:
+        kwargs["shop_domain"] = shop_domain
+    if access_token:
+        kwargs["access_token"] = access_token
+    return kwargs
+
+
 async def check_logistics_node(state: AgentState) -> dict[str, Any]:
     """Check shipment tracking status for the order.
 
@@ -72,7 +87,8 @@ async def check_logistics_node(state: AgentState) -> dict[str, Any]:
         }
 
     try:
-        provider = ProviderRegistry.get(platform, mock_overrides=state.get("mock_overrides", {}))
+        kwargs = _build_provider_kwargs(state)
+        provider = ProviderRegistry.get(platform, **kwargs)
         carrier = state.get("tracking_carrier")
         tracking = await provider.track_shipment(
             tracking_number=tracking_number,
@@ -96,9 +112,7 @@ async def check_logistics_node(state: AgentState) -> dict[str, Any]:
                 if tracking.estimated_delivery
                 else None,
                 "days_in_transit": tracking.days_in_transit,
-                "last_update": tracking.last_update.isoformat()
-                if tracking.last_update
-                else None,
+                "last_update": tracking.last_update.isoformat() if tracking.last_update else None,
                 "events": tracking.events,
             },
             "current_step": "logistics_done",

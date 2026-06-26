@@ -14,8 +14,10 @@ From PRD Section 7.2: LangGraph Node Implementation.
 """
 
 import inspect
+from typing import Any
 
 from langgraph.graph import END, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 
 from forgeflow.agent.nodes import (
     check_logistics_node,
@@ -61,7 +63,7 @@ def _wrap_with_error_handler(node_fn, node_name: str):
 
     if inspect.iscoroutinefunction(node_fn):
 
-        async def wrapped(state: AgentState) -> dict:
+        async def wrapped(state: AgentState) -> dict[str, Any]:
             try:
                 return await node_fn(state)
             except Exception as exc:
@@ -77,7 +79,7 @@ def _wrap_with_error_handler(node_fn, node_name: str):
                 }
     else:
 
-        def wrapped(state: AgentState) -> dict:
+        def wrapped(state: AgentState) -> dict[str, Any]:  # type: ignore[misc]
             try:
                 return node_fn(state)
             except Exception as exc:
@@ -95,7 +97,7 @@ def _wrap_with_error_handler(node_fn, node_name: str):
     return wrapped
 
 
-def build_agent_graph() -> StateGraph:
+def build_agent_graph() -> CompiledStateGraph:
     """Build and compile the LangGraph agent state machine.
 
     Node flow:
@@ -121,7 +123,9 @@ def build_agent_graph() -> StateGraph:
     # =========================================================================
     builder.add_node("detect_intent", _wrap_with_error_handler(detect_intent_node, "detect_intent"))
     builder.add_node("lookup_order", _wrap_with_error_handler(lookup_order_node, "lookup_order"))
-    builder.add_node("check_logistics", _wrap_with_error_handler(check_logistics_node, "check_logistics"))
+    builder.add_node(
+        "check_logistics", _wrap_with_error_handler(check_logistics_node, "check_logistics")
+    )
     builder.add_node("check_policy", _wrap_with_error_handler(check_policy_node, "check_policy"))
     builder.add_node("make_decision", _wrap_with_error_handler(make_decision_node, "make_decision"))
     builder.add_node("execute", _wrap_with_error_handler(execute_action_node, "execute"))
@@ -265,7 +269,11 @@ def build_agent_graph() -> StateGraph:
         route_after_error,
         {
             **{name: name for name in primary_nodes},  # Retry: route back to any primary node
-            **{_FORWARD_MAP[name]: _FORWARD_MAP[name] for name in primary_nodes if _FORWARD_MAP[name]},
+            **{
+                target: target
+                for name in primary_nodes
+                if (target := _FORWARD_MAP[name]) is not None
+            },
             "end": END,
         },
     )
@@ -274,10 +282,10 @@ def build_agent_graph() -> StateGraph:
 
 
 # Module-level compiled graph (lazy-initialized by get_agent_graph())
-_agent_graph: StateGraph | None = None
+_agent_graph: CompiledStateGraph | None = None
 
 
-def get_agent_graph() -> StateGraph:
+def get_agent_graph() -> CompiledStateGraph:
     """Return the compiled agent graph instance (lazy singleton).
 
     The graph is compiled on first call, not at import time, to avoid

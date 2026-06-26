@@ -9,7 +9,7 @@ From PRD Section 15.5: Online Monitoring Indicators.
 """
 
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from forgeflow.monitoring.logger import get_logger
@@ -51,7 +51,7 @@ class RunningStats:
     @property
     def stddev(self) -> float:
         """Sample standard deviation."""
-        return self.variance ** 0.5
+        return float(self.variance**0.5)
 
     def snapshot(self) -> dict[str, float]:
         """Return {count, mean, stddev} snapshot."""
@@ -160,9 +160,7 @@ class DriftDetector:
             alerts.append(f"Mean confidence {conf_snapshot['mean']:.3f} below threshold 0.7")
 
         # 3. Fallback rate
-        fallback_rate = (
-            self._fallback_count / self._total_calls if self._total_calls > 0 else 0.0
-        )
+        fallback_rate = self._fallback_count / self._total_calls if self._total_calls > 0 else 0.0
         metrics["fallback_rate"] = round(fallback_rate, 4)
         if fallback_rate > 0.05 and self._total_calls > 20:
             alerts.append(f"Fallback rate {fallback_rate:.1%} exceeds threshold 5%")
@@ -171,7 +169,9 @@ class DriftDetector:
         latency_snapshot = self._latency_ms.snapshot()
         metrics["latency_ms"] = latency_snapshot
         if latency_snapshot["mean"] > 5000 and latency_snapshot["count"] > 10:
-            alerts.append(f"Mean processing time {latency_snapshot['mean']:.0f}ms exceeds threshold 5000ms")
+            alerts.append(
+                f"Mean processing time {latency_snapshot['mean']:.0f}ms exceeds threshold 5000ms"
+            )
 
         # 5. Action distribution check
         metrics["action_distribution"] = dict(self._action_counts)
@@ -214,9 +214,8 @@ class DriftDetector:
             if q == 0:
                 q = 1e-6
             if p > 0:
-                kl += p * (p / q).bit_length()  # Simplified: use abs diff for robustness
-                # Actually use the real KL formula
                 import math
+
                 kl += p * math.log(p / q)
 
         return kl

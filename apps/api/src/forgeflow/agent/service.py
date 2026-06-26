@@ -18,7 +18,7 @@ Usage:
 
 import json
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from forgeflow.agent.graph import get_agent_graph
@@ -66,7 +66,8 @@ class AgentService:
         order_id: str | None = None,
         customer_name: str | None = None,
         attachments: list[str] | None = None,
-        mock_overrides: dict | None = None,
+        mock_overrides: dict[str, Any] | None = None,
+        access_token: str | None = None,
     ) -> dict[str, Any]:
         """Run the agent pipeline for a new ticket.
 
@@ -82,6 +83,8 @@ class AgentService:
             order_id: Optional platform order ID.
             customer_name: Optional customer name.
             attachments: Optional attachment URLs.
+            mock_overrides: Optional provider overrides for testing.
+            access_token: Optional Shopify OAuth access token for real API calls.
 
         Returns:
             Final AgentState as a dict.
@@ -109,6 +112,7 @@ class AgentService:
             customer_name=customer_name,
             attachments=attachments,
             mock_overrides=mock_overrides,
+            access_token=access_token,
         )
 
         logger.info(
@@ -126,11 +130,12 @@ class AgentService:
 
             processing_duration_ms = int((time.perf_counter() - start_time) * 1000)
             final_state["processing_duration_ms"] = processing_duration_ms
-            final_state["completed_at"] = datetime.now(UTC).isoformat()
+            final_state["completed_at"] = datetime.now(UTC)
 
             # Determine final status
             if final_state.get("requires_approval"):
                 final_state["status"] = "pending_approval"
+                final_state["sla_deadline"] = datetime.now(UTC) + timedelta(hours=24)
             elif final_state.get("execution_status") == "success":
                 final_state["status"] = "resolved"
             elif final_state.get("recommended_action") == "escalate_to_human":
@@ -199,6 +204,7 @@ class AgentService:
             state["requires_approval"] = False
             state["current_step"] = "execute"
             state["status"] = "processing"
+            state["sla_deadline"] = None
             logger.info(
                 "agent_resume_approved",
                 ticket_id=ticket_id,
@@ -210,6 +216,7 @@ class AgentService:
             state["requires_approval"] = False
             state["approval_reason"] = f"Rejected by approver: {approver_note}"
             state["status"] = "escalated"
+            state["sla_deadline"] = None
             logger.info(
                 "agent_resume_rejected",
                 ticket_id=ticket_id,
@@ -223,7 +230,7 @@ class AgentService:
 
             processing_duration_ms = int((time.perf_counter() - start_time) * 1000)
             final_state["processing_duration_ms"] = processing_duration_ms
-            final_state["completed_at"] = datetime.now(UTC).isoformat()
+            final_state["completed_at"] = datetime.now(UTC)
 
             if final_state.get("execution_status") == "success":
                 final_state["status"] = "resolved"
@@ -242,9 +249,7 @@ class AgentService:
                 message=str(e),
             ) from e
 
-    async def _publish_status(
-        self, ticket_id: str, state: dict[str, Any]
-    ) -> None:
+    async def _publish_status(self, ticket_id: str, state: dict[str, Any]) -> None:
         """Publish a status update to Redis Pub/Sub for WebSocket delivery.
 
         Args:

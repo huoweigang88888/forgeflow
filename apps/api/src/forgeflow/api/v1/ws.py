@@ -8,9 +8,12 @@ agent progress events as they happen.
 From PRD Section 9.4: WebSocket Protocol for Real-Time Updates.
 """
 
+from __future__ import annotations
+
 import asyncio
+import contextlib
 import json
-import time
+from typing import Any
 
 import redis.asyncio as redis_asyncio
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -26,10 +29,10 @@ router = APIRouter(prefix="/ws/v1", tags=["websocket"])
 settings = get_settings()
 
 # Redis connection pool (shared across all WS connections)
-_redis_pool: redis_asyncio.ConnectionPool | None = None
+_redis_pool: redis_asyncio.ConnectionPool[Any] | None = None
 
 
-async def get_redis() -> redis_asyncio.Redis:
+async def get_redis() -> redis_asyncio.Redis[Any]:
     """Return a Redis client from the shared connection pool."""
     global _redis_pool
     if _redis_pool is None:
@@ -72,12 +75,15 @@ async def ticket_status_ws(websocket: WebSocket, ticket_id: str) -> None:
     await websocket.accept()
 
     # Send initial connection confirmation
-    await _send_json(websocket, {
-        "type": "connected",
-        "ticket_id": ticket_id,
-        "timestamp": _now_iso(),
-        "data": {"message": f"Subscribed to ticket:{ticket_id}"},
-    })
+    await _send_json(
+        websocket,
+        {
+            "type": "connected",
+            "ticket_id": ticket_id,
+            "timestamp": _now_iso(),
+            "data": {"message": f"Subscribed to ticket:{ticket_id}"},
+        },
+    )
 
     redis_client = await get_redis()
     pubsub = redis_client.pubsub()
@@ -118,10 +124,8 @@ async def ticket_status_ws(websocket: WebSocket, ticket_id: str) -> None:
     except Exception:
         logger.error("ws_unexpected_error", ticket_id=ticket_id, exc_info=True)
     finally:
-        try:
+        with contextlib.suppress(Exception):
             await pubsub.unsubscribe(channel)
-        except Exception:
-            pass
         try:
             if websocket.client_state == WebSocketState.CONNECTED:
                 await websocket.close()
@@ -129,7 +133,7 @@ async def ticket_status_ws(websocket: WebSocket, ticket_id: str) -> None:
             pass
 
 
-async def _send_json(websocket: WebSocket, data: dict) -> None:
+async def _send_json(websocket: WebSocket, data: dict[str, Any]) -> None:
     """Send a JSON message through the WebSocket, swallowing errors."""
     try:
         if websocket.client_state == WebSocketState.CONNECTED:
@@ -141,4 +145,5 @@ async def _send_json(websocket: WebSocket, data: dict) -> None:
 def _now_iso() -> str:
     """Return current UTC timestamp as ISO 8601 string."""
     from datetime import UTC, datetime
+
     return datetime.now(UTC).isoformat()

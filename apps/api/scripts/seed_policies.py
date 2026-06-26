@@ -173,9 +173,7 @@ async def seed(embed: bool = False) -> None:
 
         if embed:
             try:
-                provider = LLMFactory.create(
-                    "openai", model=settings.llm.embedding_model
-                )
+                provider = LLMFactory.create("openai", model=settings.llm.embedding_model)
                 print(f"  Embedding provider: openai / {settings.llm.embedding_model}")
             except Exception as e:
                 print(f"  Embedding unavailable: {e}")
@@ -201,14 +199,19 @@ async def seed(embed: bool = False) -> None:
                     if result.success and result.embedding:
                         await set_embedding(db, policy, result.embedding)
                         embed_count += 1
-                        print(f"  [{i+1}/{len(SAMPLE_POLICIES)}] {data['title']} "
-                              f"— embedded ({result.latency_ms}ms)")
+                        print(
+                            f"  [{i+1}/{len(SAMPLE_POLICIES)}] {data['title']} "
+                            f"— embedded ({result.latency_ms}ms)"
+                        )
                     else:
-                        print(f"  [{i+1}/{len(SAMPLE_POLICIES)}] {data['title']} "
-                              f"— embed FAILED: {result.error}")
+                        print(
+                            f"  [{i+1}/{len(SAMPLE_POLICIES)}] {data['title']} "
+                            f"— embed FAILED: {result.error}"
+                        )
                 except Exception as e:
-                    print(f"  [{i+1}/{len(SAMPLE_POLICIES)}] {data['title']} "
-                          f"— embed ERROR: {e}")
+                    print(
+                        f"  [{i+1}/{len(SAMPLE_POLICIES)}] {data['title']} " f"— embed ERROR: {e}"
+                    )
             else:
                 print(f"  [{i+1}/{len(SAMPLE_POLICIES)}] {data['title']} — stored (no embed)")
 
