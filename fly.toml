@@ -1,13 +1,17 @@
 # =============================================================================
-# ForgeFlow AI - Fly.io Deployment Config
+# ForgeFlow AI - Fly.io Deployment Config (Free Tier)
 # =============================================================================
-# Deploy to Fly.io:
-#   flyctl launch
-#   flyctl secrets import < .env.production
-#   flyctl deploy
+# Free tier limits: 3 shared-cpu-1x VMs, 3GB storage, 160GB outbound
+# This config uses 1 VM unit (256MB) to stay safely within free limits.
 #
-# For the API service:
-#   flyctl launch --name forgeflow-api --dockerfile apps/api/Dockerfile
+# Deploy:
+#   flyctl apps create forgeflow-api --org personal
+#   flyctl secrets set --app forgeflow-api SECRET_KEY=xxx DB_URL=xxx ...
+#   flyctl deploy --app forgeflow-api
+#
+# Emergency stop (immediately kills all machines, $0 cost):
+#   flyctl machines stop --app forgeflow-api $(flyctl machines list --app forgeflow-api -q)
+#   OR: flyctl apps destroy forgeflow-api  (completely removes everything)
 
 app = "forgeflow-api"
 primary_region = "iad"  # US East (change to nearest region)
@@ -22,9 +26,9 @@ primary_region = "iad"  # US East (change to nearest region)
 [http_service]
   internal_port = 8000
   force_https = true
-  auto_stop_machines = "stop"
-  auto_start_machines = true
-  min_machines_running = 1
+  auto_stop_machines = "stop"   # Stop idle machines to save free quota
+  auto_start_machines = true    # Wake on first request
+  min_machines_running = 0      # Scale to zero when idle (max cost saving)
 
   [[http_service.checks]]
     interval = "30s"
@@ -33,13 +37,12 @@ primary_region = "iad"  # US East (change to nearest region)
     method = "get"
     path = "/api/health"
 
-# Scale based on load
+# Free tier: single 256MB VM
 [vm]
-  cpu_kind = "shared-cpu-1x"
-  cpus = 1
-  memory_mb = 512
+  size = "shared-cpu-1x"
+  memory_mb = 256
 
-# Metrics
+# Metrics (Prometheus scraping endpoint)
 [metrics]
   port = 9090
   path = "/metrics"

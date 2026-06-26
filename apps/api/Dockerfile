@@ -38,6 +38,7 @@ COPY apps/api/alembic.ini /app/
 # Set environment
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONPATH=/app/src
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Switch to non-root user
