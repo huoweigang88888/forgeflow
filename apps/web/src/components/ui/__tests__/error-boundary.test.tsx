@@ -4,7 +4,8 @@ import userEvent from "@testing-library/user-event";
 /**
  * Tests for ErrorBoundary component (src/components/ui/error-boundary.tsx).
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import "@/lib/i18n/config"; // Initialize i18next for tests
 
 // Component that throws on render
 function BrokenComponent({ shouldThrow }: { shouldThrow: boolean }) {

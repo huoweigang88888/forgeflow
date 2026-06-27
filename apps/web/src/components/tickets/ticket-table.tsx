@@ -2,6 +2,7 @@
 
 import type { TicketListItem, TicketStatus } from "@/types";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 
 const STATUS_COLORS: Record<TicketStatus, string> = {
 	received: "bg-slate-100 text-slate-700",
@@ -12,44 +13,55 @@ const STATUS_COLORS: Record<TicketStatus, string> = {
 	failed: "bg-red-100 text-red-700",
 };
 
-const STATUS_LABELS: Record<TicketStatus, string> = {
-	received: "Received",
-	processing: "Processing",
-	pending_approval: "Pending",
-	resolved: "Resolved",
-	escalated: "Escalated",
-	failed: "Failed",
-};
-
-const INTENT_LABELS: Record<string, string> = {
-	shipping_delay: "Shipping Delay",
-	refund_request: "Refund Request",
-	wrong_item: "Wrong Item",
-	damaged_item: "Damaged Item",
-	exchange_request: "Exchange",
-	partial_refund: "Partial Refund",
-	subscription_cancel: "Cancel Subscription",
-	pre_sale_inquiry: "Pre-Sale Inquiry",
-	other: "Other",
-};
-
-const PLATFORM_LABELS: Record<string, string> = {
-	shopify: "Shopify",
-	woocommerce: "WooCommerce",
-	amazon: "Amazon",
-	mock: "Mock",
-};
-
 interface TicketTableProps {
 	tickets: TicketListItem[];
 	isLoading: boolean;
 }
 
 export function TicketTable({ tickets, isLoading }: TicketTableProps) {
+	const { t } = useTranslation();
+
+	const getStatusLabel = (status: TicketStatus): string => {
+		const key: Record<TicketStatus, string> = {
+			received: "status.received",
+			processing: "status.processing",
+			pending_approval: "status.pending",
+			resolved: "status.resolved",
+			escalated: "status.escalated",
+			failed: "status.failed",
+		};
+		return t(key[status]);
+	};
+
+	const getIntentLabel = (intent: string): string => {
+		const keyMap: Record<string, string> = {
+			shipping_delay: "intent.shippingDelay",
+			refund_request: "intent.refundRequest",
+			wrong_item: "intent.wrongItem",
+			damaged_item: "intent.damagedItem",
+			exchange_request: "intent.exchangeRequest",
+			partial_refund: "intent.partialRefund",
+			subscription_cancel: "intent.subscriptionCancel",
+			pre_sale_inquiry: "intent.preSaleInquiry",
+			other: "intent.other",
+		};
+		return t(keyMap[intent] ?? intent);
+	};
+
+	const getPlatformLabel = (platform: string): string => {
+		const keyMap: Record<string, string> = {
+			shopify: "platform.shopify",
+			woocommerce: "platform.woocommerce",
+			amazon: "platform.amazon",
+			mock: "platform.mock",
+		};
+		return t(keyMap[platform] ?? platform);
+	};
+
 	if (isLoading) {
 		return (
 			<div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-				<p className="text-slate-400">Loading tickets...</p>
+				<p className="text-slate-400">{t("tickets.loading")}</p>
 			</div>
 		);
 	}
@@ -57,9 +69,9 @@ export function TicketTable({ tickets, isLoading }: TicketTableProps) {
 	if (tickets.length === 0) {
 		return (
 			<div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-				<p className="text-slate-400">No tickets found.</p>
+				<p className="text-slate-400">{t("tickets.noTicketsFound")}</p>
 				<p className="text-xs text-slate-300 mt-1">
-					Create a ticket via the API to see it here.
+					{t("tickets.createTicketHint")}
 				</p>
 			</div>
 		);
@@ -72,25 +84,25 @@ export function TicketTable({ tickets, isLoading }: TicketTableProps) {
 					<thead>
 						<tr className="border-b border-slate-100 bg-slate-50/50">
 							<th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-								Ticket ID
+								{t("tickets.ticketId")}
 							</th>
 							<th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-								Platform
+								{t("tickets.platform")}
 							</th>
 							<th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-								Customer
+								{t("tickets.customer")}
 							</th>
 							<th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-								Intent
+								{t("tickets.intent")}
 							</th>
 							<th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-								Status
+								{t("tickets.status")}
 							</th>
 							<th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-								Action
+								{t("tickets.action")}
 							</th>
 							<th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-								Date
+								{t("tickets.date")}
 							</th>
 						</tr>
 					</thead>
@@ -110,9 +122,7 @@ export function TicketTable({ tickets, isLoading }: TicketTableProps) {
 								</td>
 								<td className="px-5 py-3">
 									<span className="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-600">
-										{ticket.platform
-											? (PLATFORM_LABELS[ticket.platform] ?? ticket.platform)
-											: "—"}
+										{ticket.platform ? getPlatformLabel(ticket.platform) : "—"}
 									</span>
 								</td>
 								<td className="px-5 py-3">
@@ -128,9 +138,7 @@ export function TicketTable({ tickets, isLoading }: TicketTableProps) {
 								</td>
 								<td className="px-5 py-3">
 									<span className="text-sm text-slate-600">
-										{ticket.intent
-											? (INTENT_LABELS[ticket.intent] ?? ticket.intent)
-											: "—"}
+										{ticket.intent ? getIntentLabel(ticket.intent) : "—"}
 									</span>
 								</td>
 								<td className="px-5 py-3">
@@ -139,7 +147,7 @@ export function TicketTable({ tickets, isLoading }: TicketTableProps) {
 											STATUS_COLORS[ticket.status]
 										}`}
 									>
-										{STATUS_LABELS[ticket.status]}
+										{getStatusLabel(ticket.status)}
 									</span>
 								</td>
 								<td className="px-5 py-3">

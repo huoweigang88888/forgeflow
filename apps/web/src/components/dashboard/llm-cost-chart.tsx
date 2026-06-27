@@ -1,6 +1,7 @@
 "use client";
 
 import type { LLMCostPoint } from "@/types";
+import { useTranslation } from "react-i18next";
 import {
 	Bar,
 	BarChart,
@@ -16,17 +17,18 @@ interface LLMCostChartProps {
 }
 
 export function LLMCostChart({ data }: LLMCostChartProps) {
+	const { t } = useTranslation();
 	const totalCost = data.reduce((sum, d) => sum + d.cost, 0);
 
 	if (!data || data.length === 0) {
 		return (
 			<div className="bg-white rounded-xl border border-slate-200 p-5">
 				<h3 className="text-sm font-semibold text-slate-700 mb-1">
-					LLM Cost
+					{t("charts.llmCost")}
 				</h3>
-				<p className="text-xs text-slate-400">Daily API costs</p>
+				<p className="text-xs text-slate-400">{t("charts.dailyApiCosts")}</p>
 				<p className="text-sm text-slate-400 text-center py-8">
-					No cost data available yet.
+					{t("charts.noCostData")}
 				</p>
 			</div>
 		);
@@ -35,12 +37,14 @@ export function LLMCostChart({ data }: LLMCostChartProps) {
 	return (
 		<div className="bg-white rounded-xl border border-slate-200 p-5">
 			<div className="flex items-center justify-between mb-1">
-				<h3 className="text-sm font-semibold text-slate-700">LLM Cost</h3>
+				<h3 className="text-sm font-semibold text-slate-700">
+					{t("charts.llmCost")}
+				</h3>
 				<span className="text-xs font-medium text-slate-500">
-					Total: ${totalCost.toFixed(2)}
+					{t("charts.total", { total: totalCost.toFixed(2) })}
 				</span>
 			</div>
-			<p className="text-xs text-slate-400 mb-4">Daily API costs</p>
+			<p className="text-xs text-slate-400 mb-4">{t("charts.dailyApiCosts")}</p>
 			<ResponsiveContainer width="100%" height={200}>
 				<BarChart data={data}>
 					<CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -56,15 +60,15 @@ export function LLMCostChart({ data }: LLMCostChartProps) {
 					<Tooltip
 						formatter={(value) => [
 							`$${Number(value).toFixed(4)}`,
-							"Cost",
+							t("charts.cost"),
 						]}
-						labelFormatter={(label) => `Date: ${label}`}
+						labelFormatter={(label) => t("charts.date", { label })}
 					/>
 					<Bar
 						dataKey="cost"
 						fill="#818cf8"
 						radius={[4, 4, 0, 0]}
-						name="LLM Cost"
+						name={t("charts.llmCostBar")}
 					/>
 				</BarChart>
 			</ResponsiveContainer>

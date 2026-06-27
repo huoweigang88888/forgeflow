@@ -125,13 +125,22 @@ async def test_intent_pre_sale_inquiry_phrasing():
 
 
 @pytest.mark.asyncio
-async def test_intent_other_phrasing():
-    """Node should classify non-after-sales queries as 'other'."""
+async def test_intent_pre_sale_restocking_phrasing():
+    """Node should classify pre-purchase restocking questions as pre_sale_inquiry.
+
+    This is the golden_006 case — pre-sale inquiries must NOT be classified as 'other'.
+    The hard-rule keyword detector catches this before the LLM call (zero cost).
+    """
     state = _make_state("When will you restock the blue one?")
     result = await detect_intent_node(state)
 
     assert "intent" in result
     assert result["current_step"] == "intent_done"
+    # With hard-rule pre-sale detection, no LLM call needed
+    assert result["intent"] == "pre_sale_inquiry"
+    assert result["confidence"] >= 0.88
+    assert result["llm_call_count"] == 0
+    assert result["fallback_used"] is False
 
 
 # =============================================================================

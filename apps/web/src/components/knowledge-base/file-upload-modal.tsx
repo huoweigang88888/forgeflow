@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { FileUp, X } from "lucide-react";
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { uploadPolicyFile } from "@/lib/policies";
 
@@ -19,6 +20,7 @@ export function FileUploadModal({ isOpen, onClose }: FileUploadModalProps) {
 	const [dragOver, setDragOver] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const queryClient = useQueryClient();
+	const { t } = useTranslation();
 
 	const uploadMutation = useMutation({
 		mutationFn: async () => {
@@ -27,7 +29,7 @@ export function FileUploadModal({ isOpen, onClose }: FileUploadModalProps) {
 				file,
 				title || file.name.replace(/\.[^.]+$/, ""),
 				category || undefined,
-				tags ? tags.split(",").map((t) => t.trim()) : undefined,
+				tags ? tags.split(",").map((tag) => tag.trim()) : undefined,
 			);
 		},
 		onSuccess: (data) => {
@@ -66,7 +68,7 @@ export function FileUploadModal({ isOpen, onClose }: FileUploadModalProps) {
 			<div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 p-6">
 				<div className="flex items-center justify-between mb-4">
 					<h2 className="text-lg font-semibold text-slate-900">
-						Upload Policy Document
+						{t("knowledgeBase.uploadPolicyDoc")}
 					</h2>
 					<button
 						type="button"
@@ -109,16 +111,18 @@ export function FileUploadModal({ isOpen, onClose }: FileUploadModalProps) {
 						<div>
 							<p className="text-sm font-medium text-green-700">{file.name}</p>
 							<p className="text-xs text-green-500 mt-1">
-								{(file.size / 1024).toFixed(1)} KB — click to change
+								{t("knowledgeBase.fileSizeChange", {
+									size: (file.size / 1024).toFixed(1),
+								})}
 							</p>
 						</div>
 					) : (
 						<div>
 							<p className="text-sm text-slate-600">
-								Drop a file here, or click to browse
+								{t("knowledgeBase.dropFile")}
 							</p>
 							<p className="text-xs text-slate-400 mt-1">
-								Supports PDF, Markdown, TXT
+								{t("knowledgeBase.supportsFormats")}
 							</p>
 						</div>
 					)}
@@ -144,14 +148,14 @@ export function FileUploadModal({ isOpen, onClose }: FileUploadModalProps) {
 							htmlFor="upload-title"
 							className="block text-xs font-medium text-slate-600 mb-1"
 						>
-							Title
+							{t("knowledgeBase.titleLabel")}
 						</label>
 						<input
 							id="upload-title"
 							type="text"
 							value={title}
 							onChange={(e) => setTitle(e.target.value)}
-							placeholder="Policy title..."
+							placeholder={t("knowledgeBase.titlePlaceholderShort")}
 							className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
 						/>
 					</div>
@@ -161,7 +165,7 @@ export function FileUploadModal({ isOpen, onClose }: FileUploadModalProps) {
 								htmlFor="upload-category"
 								className="block text-xs font-medium text-slate-600 mb-1"
 							>
-								Category
+								{t("knowledgeBase.categoryLabel")}
 							</label>
 							<select
 								id="upload-category"
@@ -169,11 +173,19 @@ export function FileUploadModal({ isOpen, onClose }: FileUploadModalProps) {
 								onChange={(e) => setCategory(e.target.value)}
 								className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
 							>
-								<option value="">None</option>
-								<option value="shipping">Shipping</option>
-								<option value="refund">Refund</option>
-								<option value="exchange">Exchange</option>
-								<option value="general">General</option>
+								<option value="">{t("knowledgeBase.categoryNone")}</option>
+								<option value="shipping">
+									{t("knowledgeBase.categoryShipping")}
+								</option>
+								<option value="refund">
+									{t("knowledgeBase.categoryRefund")}
+								</option>
+								<option value="exchange">
+									{t("knowledgeBase.categoryExchange")}
+								</option>
+								<option value="general">
+									{t("knowledgeBase.categoryGeneral")}
+								</option>
 							</select>
 						</div>
 						<div>
@@ -181,14 +193,14 @@ export function FileUploadModal({ isOpen, onClose }: FileUploadModalProps) {
 								htmlFor="upload-tags"
 								className="block text-xs font-medium text-slate-600 mb-1"
 							>
-								Tags (comma-separated)
+								{t("knowledgeBase.tagsCommaSeparated")}
 							</label>
 							<input
 								id="upload-tags"
 								type="text"
 								value={tags}
 								onChange={(e) => setTags(e.target.value)}
-								placeholder="e.g. premium, warranty"
+								placeholder={t("knowledgeBase.tagsPlaceholderShort")}
 								className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
 							/>
 						</div>
@@ -202,7 +214,7 @@ export function FileUploadModal({ isOpen, onClose }: FileUploadModalProps) {
 						onClick={onClose}
 						className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
 					>
-						Cancel
+						{t("common.cancel")}
 					</button>
 					<button
 						type="button"
@@ -210,13 +222,17 @@ export function FileUploadModal({ isOpen, onClose }: FileUploadModalProps) {
 						disabled={!file || uploadMutation.isPending}
 						className="px-4 py-2 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700 disabled:opacity-50"
 					>
-						{uploadMutation.isPending ? "Uploading..." : "Upload"}
+						{uploadMutation.isPending
+							? t("common.uploading")
+							: t("common.upload")}
 					</button>
 				</div>
 
 				{uploadMutation.isError && (
 					<p className="text-xs text-red-600 mt-2">
-						Upload failed: {String(uploadMutation.error)}
+						{t("knowledgeBase.uploadFailed", {
+							error: String(uploadMutation.error),
+						})}
 					</p>
 				)}
 			</div>

@@ -37,13 +37,13 @@ async function request<T>(
 	const headers: Record<string, string> = {
 		"Content-Type": "application/json",
 		"X-Request-ID": crypto.randomUUID(),
-		...options.headers as Record<string, string>,
+		...(options.headers as Record<string, string>),
 	};
 
 	// Inject JWT from auth store (set by Shopify OAuth flow)
 	const token = useAuthStore.getState().token;
 	if (token) {
-		headers["Authorization"] = `Bearer ${token}`;
+		headers.Authorization = `Bearer ${token}`;
 	}
 
 	const response = await fetch(url, {

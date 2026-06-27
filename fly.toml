@@ -37,10 +37,10 @@ primary_region = "iad"  # US East (change to nearest region)
     method = "get"
     path = "/api/health"
 
-# Free tier: single 256MB VM
+# LangGraph Agent needs 512MB+ (OOM at 256MB)
 [vm]
   size = "shared-cpu-1x"
-  memory_mb = 256
+  memory_mb = 512
 
 # Metrics (Prometheus scraping endpoint)
 [metrics]

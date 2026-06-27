@@ -1,23 +1,7 @@
 "use client";
 
 import type { TicketStatus } from "@/types";
-
-const STATUS_OPTIONS: { value: TicketStatus | "all"; label: string }[] = [
-	{ value: "all", label: "All" },
-	{ value: "processing", label: "Processing" },
-	{ value: "pending_approval", label: "Pending Approval" },
-	{ value: "resolved", label: "Resolved" },
-	{ value: "escalated", label: "Escalated" },
-	{ value: "failed", label: "Failed" },
-];
-
-const PLATFORM_OPTIONS: { value: string | "all"; label: string }[] = [
-	{ value: "all", label: "All Platforms" },
-	{ value: "shopify", label: "Shopify" },
-	{ value: "woocommerce", label: "WooCommerce" },
-	{ value: "amazon", label: "Amazon" },
-	{ value: "mock", label: "Mock" },
-];
+import { useTranslation } from "react-i18next";
 
 interface FilterBarProps {
 	current: TicketStatus | "all";
@@ -26,7 +10,31 @@ interface FilterBarProps {
 	onPlatformChange: (platform: string | "all") => void;
 }
 
-export function FilterBar({ current, onChange, platform, onPlatformChange }: FilterBarProps) {
+export function FilterBar({
+	current,
+	onChange,
+	platform,
+	onPlatformChange,
+}: FilterBarProps) {
+	const { t } = useTranslation();
+
+	const STATUS_OPTIONS: { value: TicketStatus | "all"; label: string }[] = [
+		{ value: "all", label: t("tickets.filterAll") },
+		{ value: "processing", label: t("tickets.filterProcessing") },
+		{ value: "pending_approval", label: t("tickets.filterPendingApproval") },
+		{ value: "resolved", label: t("tickets.filterResolved") },
+		{ value: "escalated", label: t("tickets.filterEscalated") },
+		{ value: "failed", label: t("tickets.filterFailed") },
+	];
+
+	const PLATFORM_OPTIONS: { value: string | "all"; label: string }[] = [
+		{ value: "all", label: t("platform.allPlatforms") },
+		{ value: "shopify", label: t("platform.shopify") },
+		{ value: "woocommerce", label: t("platform.woocommerce") },
+		{ value: "amazon", label: t("platform.amazon") },
+		{ value: "mock", label: t("platform.mock") },
+	];
+
 	return (
 		<div className="space-y-3">
 			{/* Status filter */}

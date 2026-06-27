@@ -3,6 +3,7 @@
 import type { PendingApproval } from "@/types";
 import { AlertTriangle, Check, Clock, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface ApprovalPanelProps {
 	approval: PendingApproval;
@@ -32,6 +33,7 @@ export function ApprovalPanel({
 	const [showConfirm, setShowConfirm] = useState<"approve" | "reject" | null>(
 		null,
 	);
+	const { t } = useTranslation();
 
 	// Client-side countdown from sla_remaining_seconds
 	const [countdown, setCountdown] = useState<number | null>(
@@ -58,7 +60,7 @@ export function ApprovalPanel({
 		}, 1000);
 
 		return () => clearInterval(interval);
-	}, [approval.sla_remaining_seconds, approval.sla_breached]);
+	}, [approval.sla_remaining_seconds]);
 
 	const handleConfirm = async () => {
 		if (!showConfirm) return;
@@ -78,10 +80,10 @@ export function ApprovalPanel({
 				</div>
 				<div>
 					<h3 className="text-sm font-semibold text-amber-800">
-						Approval Required
+						{t("approvals.approvalRequired")}
 					</h3>
 					<p className="text-sm text-amber-700 mt-1">
-						This ticket requires human review before proceeding.
+						{t("approvals.approvalRequiredDesc")}
 					</p>
 				</div>
 			</div>
@@ -99,10 +101,12 @@ export function ApprovalPanel({
 				>
 					<Clock size={16} />
 					{breached ? (
-						<span>SLA Deadline Breached — escalate immediately</span>
+						<span>{t("approvals.slaDeadlineBreached")}</span>
 					) : (
 						<span>
-							Time remaining: {formatSlaCountdown(countdown)}
+							{t("approvals.timeRemaining", {
+								countdown: formatSlaCountdown(countdown),
+							})}
 						</span>
 					)}
 				</div>
@@ -111,26 +115,28 @@ export function ApprovalPanel({
 			{/* Details */}
 			<div className="grid grid-cols-2 gap-3 mb-4 text-sm">
 				<div>
-					<span className="text-slate-500">Action:</span>{" "}
+					<span className="text-slate-500">{t("approvals.action")}:</span>{" "}
 					<span className="font-medium text-slate-800 capitalize">
 						{approval.action?.replace(/_/g, " ") ?? "unknown"}
 					</span>
 				</div>
 				{approval.amount != null && approval.amount > 0 && (
 					<div>
-						<span className="text-slate-500">Amount:</span>{" "}
+						<span className="text-slate-500">{t("approvals.amount")}:</span>{" "}
 						<span className="font-medium text-slate-800">
 							${approval.amount.toFixed(2)}
 						</span>
 					</div>
 				)}
 				<div className="col-span-2">
-					<span className="text-slate-500">Reason:</span>{" "}
+					<span className="text-slate-500">{t("approvals.reason")}:</span>{" "}
 					<span className="text-slate-700">{approval.reason || "—"}</span>
 				</div>
 				{approval.decision_explanation && (
 					<div className="col-span-2">
-						<span className="text-slate-500">Agent Explanation:</span>
+						<span className="text-slate-500">
+							{t("approvals.agentExplanation")}:
+						</span>
 						<p className="text-slate-700 mt-0.5 text-xs leading-relaxed bg-amber-100/50 rounded-lg p-2">
 							{approval.decision_explanation}
 						</p>
@@ -144,14 +150,14 @@ export function ApprovalPanel({
 					htmlFor="approval-note"
 					className="block text-xs font-medium text-slate-600 mb-1"
 				>
-					Note (optional)
+					{t("approvals.noteOptional")}
 				</label>
 				<input
 					id="approval-note"
 					type="text"
 					value={note}
 					onChange={(e) => setNote(e.target.value)}
-					placeholder="Add a note for this decision..."
+					placeholder={t("approvals.notePlaceholder")}
 					className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
 					disabled={isSubmitting}
 				/>
@@ -167,7 +173,7 @@ export function ApprovalPanel({
 						className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
 					>
 						<Check size={16} />
-						Approve
+						{t("approvals.approve")}
 					</button>
 					<button
 						type="button"
@@ -176,13 +182,15 @@ export function ApprovalPanel({
 						className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-white text-red-600 text-sm font-medium rounded-lg border border-red-200 hover:bg-red-50 disabled:opacity-50 transition-colors"
 					>
 						<X size={16} />
-						Reject & Escalate
+						{t("approvals.reject")} & Escalate
 					</button>
 				</div>
 			) : (
 				<div className="space-y-3">
 					<p className="text-sm font-medium text-slate-700">
-						Confirm {showConfirm === "approve" ? "approval" : "rejection"}?
+						{showConfirm === "approve"
+							? t("approvals.confirmApproval")
+							: t("approvals.confirmRejection")}
 					</p>
 					<div className="flex gap-3">
 						<button
@@ -195,7 +203,7 @@ export function ApprovalPanel({
 									: "bg-red-600 hover:bg-red-700"
 							}`}
 						>
-							{isSubmitting ? "Processing..." : "Yes, confirm"}
+							{isSubmitting ? t("common.processing") : t("common.yesConfirm")}
 						</button>
 						<button
 							type="button"
@@ -203,7 +211,7 @@ export function ApprovalPanel({
 							disabled={isSubmitting}
 							className="flex-1 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors"
 						>
-							Cancel
+							{t("common.cancel")}
 						</button>
 					</div>
 				</div>

@@ -7,6 +7,7 @@
     "dev": "concurrently -n api,web -c blue,green \"make -C apps/api dev\" \"pnpm --filter @forgeflow/web dev\"",
     "dev:api": "make -C apps/api dev",
     "dev:web": "pnpm --filter @forgeflow/web dev",
+    "build": "pnpm --filter @forgeflow/web build",
     "lint": "pnpm --filter @forgeflow/web lint && make -C apps/api lint",
     "typecheck": "pnpm --filter @forgeflow/web typecheck && make -C apps/api typecheck",
     "test": "pnpm --filter @forgeflow/web test && make -C apps/api test",

@@ -1,5 +1,6 @@
 {
   "framework": "nextjs",
+  "installCommand": "npm install -g pnpm@10 && pnpm install --frozen-lockfile",
   "buildCommand": "pnpm --filter @forgeflow/web build",
   "outputDirectory": "apps/web/.next",
   "build": {

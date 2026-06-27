@@ -4,6 +4,7 @@ import type { TicketListItem } from "@/types";
 import { AlertTriangle, Check, Clock, DollarSign, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface ApprovalCardProps {
 	ticket: TicketListItem;
@@ -60,6 +61,7 @@ export function ApprovalCard({
 	const [mode, setMode] = useState<
 		"idle" | "confirm_approve" | "confirm_reject"
 	>("idle");
+	const { t } = useTranslation();
 
 	const { remaining, breached } = useSlaTimer(ticket.sla_deadline);
 
@@ -94,7 +96,7 @@ export function ApprovalCard({
 				</div>
 				<span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
 					<AlertTriangle size={12} />
-					Needs Review
+					{t("approvals.needsReview")}
 				</span>
 			</div>
 
@@ -106,7 +108,9 @@ export function ApprovalCard({
 			{/* Action & Amount */}
 			<div className="flex items-center gap-4 mb-4 text-sm">
 				<div>
-					<span className="text-slate-400 text-xs">Action:</span>{" "}
+					<span className="text-slate-400 text-xs">
+						{t("approvals.action")}:
+					</span>{" "}
 					<span className="font-medium text-slate-800 capitalize">
 						{ticket.recommended_action?.replace(/_/g, " ") ?? "—"}
 					</span>
@@ -134,7 +138,7 @@ export function ApprovalCard({
 				>
 					<Clock size={14} />
 					{breached ? (
-						<span>SLA Breached</span>
+						<span>{t("approvals.slaBreached")}</span>
 					) : (
 						<span>{formatSlaCountdown(remaining)}</span>
 					)}
@@ -147,7 +151,7 @@ export function ApprovalCard({
 					type="text"
 					value={note}
 					onChange={(e) => setNote(e.target.value)}
-					placeholder="Add a note (optional)..."
+					placeholder={t("approvals.cardNotePlaceholder")}
 					className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
 					disabled={isSubmitting}
 				/>
@@ -163,7 +167,7 @@ export function ApprovalCard({
 						className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
 					>
 						<Check size={12} />
-						Approve
+						{t("approvals.approve")}
 					</button>
 					<button
 						type="button"
@@ -172,13 +176,15 @@ export function ApprovalCard({
 						className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
 					>
 						<X size={12} />
-						Reject
+						{t("approvals.reject")}
 					</button>
 				</div>
 			) : (
 				<div className="space-y-2">
 					<p className="text-xs font-medium text-slate-700">
-						Confirm {mode === "confirm_approve" ? "approval" : "rejection"}?
+						{mode === "confirm_approve"
+							? t("approvals.confirmApproval")
+							: t("approvals.confirmRejection")}
 					</p>
 					<div className="flex gap-2">
 						<button
@@ -191,7 +197,7 @@ export function ApprovalCard({
 									: "bg-red-600 hover:bg-red-700"
 							}`}
 						>
-							{isSubmitting ? "..." : "Yes"}
+							{isSubmitting ? "..." : t("common.yes")}
 						</button>
 						<button
 							type="button"
@@ -199,7 +205,7 @@ export function ApprovalCard({
 							disabled={isSubmitting}
 							className="flex-1 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors"
 						>
-							Cancel
+							{t("common.cancel")}
 						</button>
 					</div>
 				</div>
@@ -207,7 +213,7 @@ export function ApprovalCard({
 
 			{/* Date */}
 			<p className="text-xs text-slate-400 mt-3">
-				Created:{" "}
+				{t("approvals.created")}:{" "}
 				{ticket.created_at ? new Date(ticket.created_at).toLocaleString() : "—"}
 			</p>
 		</div>

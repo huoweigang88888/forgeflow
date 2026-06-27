@@ -1,10 +1,15 @@
 "use client";
 
 import type { SearchMode } from "@/lib/policies";
-import { searchPolicies, searchPoliciesHybrid, searchPoliciesText } from "@/lib/policies";
+import {
+	searchPolicies,
+	searchPoliciesHybrid,
+	searchPoliciesText,
+} from "@/lib/policies";
 import type { PolicySearchHit } from "@/types";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface SearchConsoleProps {
 	isOpen: boolean;
@@ -19,6 +24,7 @@ export function SearchConsole({ isOpen, onToggle }: SearchConsoleProps) {
 	const [total, setTotal] = useState(0);
 	const [searching, setSearching] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const { t } = useTranslation();
 
 	const handleSearch = async () => {
 		if (!query.trim()) return;
@@ -48,6 +54,12 @@ export function SearchConsole({ isOpen, onToggle }: SearchConsoleProps) {
 		}
 	};
 
+	const modeLabels: Record<SearchMode, string> = {
+		semantic: t("knowledgeBase.semantic"),
+		text: t("knowledgeBase.text"),
+		hybrid: t("knowledgeBase.hybrid"),
+	};
+
 	return (
 		<div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
 			<button
@@ -57,8 +69,10 @@ export function SearchConsole({ isOpen, onToggle }: SearchConsoleProps) {
 			>
 				<div className="flex items-center gap-2 text-sm font-medium text-slate-700">
 					<SlidersHorizontal size={16} />
-					Search Console
-					<span className="text-xs text-slate-400 font-normal">(Debug)</span>
+					{t("knowledgeBase.searchConsole")}
+					<span className="text-xs text-slate-400 font-normal">
+						{t("knowledgeBase.searchConsoleDebug")}
+					</span>
 				</div>
 				<span
 					className={`text-xs text-slate-400 transition-transform ${
@@ -78,7 +92,7 @@ export function SearchConsole({ isOpen, onToggle }: SearchConsoleProps) {
 							value={query}
 							onChange={(e) => setQuery(e.target.value)}
 							onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-							placeholder="Enter search query..."
+							placeholder={t("knowledgeBase.searchQueryPlaceholder")}
 							className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
 						/>
 						<button
@@ -88,19 +102,13 @@ export function SearchConsole({ isOpen, onToggle }: SearchConsoleProps) {
 							className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700 disabled:opacity-50"
 						>
 							<Search size={14} />
-							{searching ? "..." : "Search"}
+							{searching ? "..." : t("common.search")}
 						</button>
 					</div>
 
 					{/* Mode selector */}
 					<div className="flex gap-2 mb-3">
-						{(
-							[
-								["semantic", "Semantic"],
-								["text", "Text"],
-								["hybrid", "Hybrid"],
-							] as [SearchMode, string][]
-						).map(([m, label]) => (
+						{(Object.keys(modeLabels) as SearchMode[]).map((m) => (
 							<button
 								type="button"
 								key={m}
@@ -111,7 +119,7 @@ export function SearchConsole({ isOpen, onToggle }: SearchConsoleProps) {
 										: "bg-slate-100 text-slate-600 hover:bg-slate-200"
 								}`}
 							>
-								{label}
+								{modeLabels[m]}
 							</button>
 						))}
 					</div>
@@ -120,7 +128,7 @@ export function SearchConsole({ isOpen, onToggle }: SearchConsoleProps) {
 					{mode !== "text" && (
 						<div className="flex items-center gap-3 mb-3">
 							<span className="text-xs text-slate-500 shrink-0">
-								Threshold: {threshold.toFixed(2)}
+								{t("knowledgeBase.threshold", { value: threshold.toFixed(2) })}
 							</span>
 							<input
 								type="range"
@@ -136,12 +144,14 @@ export function SearchConsole({ isOpen, onToggle }: SearchConsoleProps) {
 
 					{/* Results */}
 					{error && (
-						<p className="text-xs text-red-600 mb-2">Error: {error}</p>
+						<p className="text-xs text-red-600 mb-2">
+							{t("knowledgeBase.searchError", { message: error })}
+						</p>
 					)}
 					{results.length > 0 && (
 						<div>
 							<p className="text-xs text-slate-400 mb-2">
-								{total} result{total !== 1 ? "s" : ""}
+								{t("knowledgeBase.results", { total })}
 							</p>
 							<div className="space-y-2 max-h-80 overflow-y-auto">
 								{results.map((hit, i) => (
@@ -167,7 +177,9 @@ export function SearchConsole({ isOpen, onToggle }: SearchConsoleProps) {
 												</span>
 											)}
 											<span className="text-[10px] text-slate-400">
-												chunk #{hit.policy.chunk_index}
+												{t("knowledgeBase.chunkNumber", {
+													n: hit.policy.chunk_index,
+												})}
 											</span>
 										</div>
 									</div>
@@ -177,7 +189,7 @@ export function SearchConsole({ isOpen, onToggle }: SearchConsoleProps) {
 					)}
 					{!searching && query && results.length === 0 && !error && (
 						<p className="text-xs text-slate-400 text-center py-4">
-							No results found. Try a different query or mode.
+							{t("knowledgeBase.noSearchResults")}
 						</p>
 					)}
 				</div>

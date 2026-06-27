@@ -14,6 +14,7 @@ Endpoints:
     POST   /api/v1/tickets/{id}/cancel  — Cancel a processing ticket
 """
 
+import asyncio
 from datetime import UTC, datetime
 from typing import Any
 
@@ -46,10 +47,19 @@ _agent_service: AgentService | None = None
 
 
 async def _get_agent_service() -> AgentService:
-    """Return the AgentService singleton with a real Redis client."""
+    """Return the AgentService singleton with Redis if available.
+
+    Falls back to None (no Redis) if the Redis connection fails.
+    Agent processing still works without Redis — only real-time
+    WebSocket status updates are disabled.
+    """
     global _agent_service
     if _agent_service is None:
-        redis_client = await get_redis()
+        try:
+            redis_client = await asyncio.wait_for(get_redis(), timeout=3.0)
+        except (TimeoutError, Exception):
+            logger.warning("redis_unavailable", reason="Agent will run without real-time updates")
+            redis_client = None
         _agent_service = AgentService(redis_client=redis_client)
     return _agent_service
 

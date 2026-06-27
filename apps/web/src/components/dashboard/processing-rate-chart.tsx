@@ -1,6 +1,7 @@
 "use client";
 
 import type { ProcessingRatePoint } from "@/types";
+import { useTranslation } from "react-i18next";
 import {
 	Area,
 	AreaChart,
@@ -16,19 +17,21 @@ interface ProcessingRateChartProps {
 }
 
 export function ProcessingRateChart({ data }: ProcessingRateChartProps) {
+	const { t } = useTranslation();
 	// Calculate average tickets per hour
 	const totalTickets = data.reduce((sum, d) => sum + d.count, 0);
-	const avgRate = data.length > 0 ? (totalTickets / data.length).toFixed(1) : "0";
+	const avgRate =
+		data.length > 0 ? (totalTickets / data.length).toFixed(1) : "0";
 
 	if (!data || data.length === 0) {
 		return (
 			<div className="bg-white rounded-xl border border-slate-200 p-5">
 				<h3 className="text-sm font-semibold text-slate-700 mb-1">
-					Processing Rate
+					{t("charts.processingRate")}
 				</h3>
-				<p className="text-xs text-slate-400">Tickets/hour (last 24h)</p>
+				<p className="text-xs text-slate-400">{t("charts.ticketsPerHour")}</p>
 				<p className="text-sm text-slate-400 text-center py-8">
-					No processing data available yet.
+					{t("charts.noProcessingData")}
 				</p>
 			</div>
 		);
@@ -38,13 +41,15 @@ export function ProcessingRateChart({ data }: ProcessingRateChartProps) {
 		<div className="bg-white rounded-xl border border-slate-200 p-5">
 			<div className="flex items-center justify-between mb-1">
 				<h3 className="text-sm font-semibold text-slate-700">
-					Processing Rate
+					{t("charts.processingRate")}
 				</h3>
 				<span className="text-xs font-medium text-slate-500">
-					~{avgRate}/hr avg
+					{t("charts.avgRate", { avgRate })}
 				</span>
 			</div>
-			<p className="text-xs text-slate-400 mb-4">Tickets/hour (last 24h)</p>
+			<p className="text-xs text-slate-400 mb-4">
+				{t("charts.ticketsPerHour")}
+			</p>
 			<ResponsiveContainer width="100%" height={200}>
 				<AreaChart data={data}>
 					<CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -61,9 +66,11 @@ export function ProcessingRateChart({ data }: ProcessingRateChartProps) {
 					/>
 					<YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
 					<Tooltip
-						formatter={(value) => [Number(value), "Tickets"]}
+						formatter={(value) => [Number(value), t("charts.tickets")]}
 						labelFormatter={(label) =>
-							`Hour: ${new Date(String(label)).toLocaleString()}`
+							t("charts.hour", {
+								label: new Date(String(label)).toLocaleString(),
+							})
 						}
 					/>
 					<Area
@@ -72,7 +79,7 @@ export function ProcessingRateChart({ data }: ProcessingRateChartProps) {
 						stroke="#6366f1"
 						fill="#c7d2fe"
 						strokeWidth={2}
-						name="Tickets"
+						name={t("charts.tickets")}
 					/>
 				</AreaChart>
 			</ResponsiveContainer>

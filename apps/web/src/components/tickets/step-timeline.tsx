@@ -2,15 +2,7 @@
 
 import type { StepName, StepStatus } from "@/types";
 import { CheckCircle2, Circle, Clock, XCircle } from "lucide-react";
-
-const STEP_LABELS: Record<StepName, string> = {
-	detect_intent: "Detect Intent",
-	lookup_order: "Lookup Order",
-	check_logistics: "Check Logistics",
-	check_policy: "Check Policy",
-	make_decision: "Make Decision",
-	execute: "Execute",
-};
+import { useTranslation } from "react-i18next";
 
 interface StepTimelineProps {
 	steps: { step: string; status: string; result: string | null }[];
@@ -31,10 +23,24 @@ function StepIcon({ status }: { status: StepStatus | string }) {
 }
 
 export function StepTimeline({ steps, progress }: StepTimelineProps) {
+	const { t } = useTranslation();
+
+	const getStepLabel = (step: string): string => {
+		const keyMap: Record<string, string> = {
+			detect_intent: "steps.detectIntent",
+			lookup_order: "steps.lookupOrder",
+			check_logistics: "steps.checkLogistics",
+			check_policy: "steps.checkPolicy",
+			make_decision: "steps.makeDecision",
+			execute: "steps.execute",
+		};
+		return t(keyMap[step] ?? step);
+	};
+
 	if (!steps || steps.length === 0) {
 		return (
 			<div className="bg-white rounded-xl border border-slate-200 p-5 text-center">
-				<p className="text-sm text-slate-400">Waiting for agent to start...</p>
+				<p className="text-sm text-slate-400">{t("steps.waitingForAgent")}</p>
 			</div>
 		);
 	}
@@ -43,10 +49,10 @@ export function StepTimeline({ steps, progress }: StepTimelineProps) {
 		<div className="bg-white rounded-xl border border-slate-200 p-5">
 			<div className="flex items-center justify-between mb-4">
 				<h3 className="text-sm font-semibold text-slate-700">
-					Processing Steps
+					{t("steps.processingSteps")}
 				</h3>
 				<span className="text-xs text-slate-400">
-					{Math.round(progress * 100)}% complete
+					{t("steps.percentComplete", { n: Math.round(progress * 100) })}
 				</span>
 			</div>
 
@@ -87,7 +93,7 @@ export function StepTimeline({ steps, progress }: StepTimelineProps) {
 												: "text-slate-400"
 									}`}
 								>
-									{STEP_LABELS[s.step as StepName] ?? s.step}
+									{getStepLabel(s.step)}
 								</p>
 								{s.result && (
 									<p className="text-xs text-slate-500 mt-0.5">{s.result}</p>

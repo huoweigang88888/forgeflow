@@ -2,6 +2,7 @@
 
 import { useAuthStore } from "@/lib/auth-store";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 /**
  * Shopify OAuth connection component.
@@ -22,6 +23,7 @@ export default function ShopifyOAuth() {
 	const [shopInput, setShopInput] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [disconnecting, setDisconnecting] = useState(false);
+	const { t } = useTranslation();
 
 	const isConnected = !!token && !!shopDomain;
 
@@ -29,13 +31,11 @@ export default function ShopifyOAuth() {
 	const handleConnect = () => {
 		const domain = shopInput.trim();
 		if (!domain) {
-			setError("Please enter your Shopify store domain.");
+			setError(t("shopify.enterDomain"));
 			return;
 		}
 		if (!domain.endsWith(".myshopify.com")) {
-			setError(
-				'Store domain must be a .myshopify.com domain (e.g., "mystore.myshopify.com")',
-			);
+			setError(t("shopify.invalidDomain"));
 			return;
 		}
 
@@ -49,11 +49,7 @@ export default function ShopifyOAuth() {
 
 	/** Disconnect: call backend to delete session, then clear local state */
 	const handleDisconnect = async () => {
-		if (
-			!window.confirm(
-				"Disconnect this Shopify store? The access token will be deleted.",
-			)
-		) {
+		if (!window.confirm(t("shopify.confirmDisconnect"))) {
 			return;
 		}
 
@@ -73,13 +69,15 @@ export default function ShopifyOAuth() {
 
 			if (!response.ok) {
 				const data = await response.json().catch(() => ({}));
-				throw new Error(data.message || "Failed to disconnect");
+				throw new Error(data.message || t("shopify.failedDisconnect"));
 			}
 
 			clearToken();
 			setShopInput("");
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "Disconnect failed");
+			setError(
+				err instanceof Error ? err.message : t("shopify.disconnectFailed"),
+			);
 		} finally {
 			setDisconnecting(false);
 		}
@@ -97,10 +95,10 @@ export default function ShopifyOAuth() {
 						</span>
 						<div>
 							<p className="text-sm font-medium text-green-800">
-								Connected: {shopDomain}
+								{t("shopify.connected", { domain: shopDomain })}
 							</p>
 							<p className="text-xs text-green-600">
-								Shopify access token is active
+								{t("shopify.tokenActive")}
 							</p>
 						</div>
 					</div>
@@ -110,7 +108,9 @@ export default function ShopifyOAuth() {
 						disabled={disconnecting}
 						className="rounded-lg border border-red-300 px-4 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 transition-colors disabled:opacity-50"
 					>
-						{disconnecting ? "Disconnecting..." : "Disconnect"}
+						{disconnecting
+							? t("shopify.disconnecting")
+							: t("shopify.disconnect")}
 					</button>
 				</div>
 			) : (
@@ -121,13 +121,13 @@ export default function ShopifyOAuth() {
 							htmlFor="shopify-domain-oauth"
 							className="block text-sm font-medium text-slate-700 mb-1"
 						>
-							Shopify Store Domain
+							{t("shopify.storeDomain")}
 						</label>
 						<div className="flex gap-3 max-w-md">
 							<input
 								id="shopify-domain-oauth"
 								type="text"
-								placeholder="mystore.myshopify.com"
+								placeholder={t("shopify.storeDomainPlaceholder")}
 								value={shopInput}
 								onChange={(e) => {
 									setShopInput(e.target.value);
@@ -144,11 +144,13 @@ export default function ShopifyOAuth() {
 								disabled={isConnecting}
 								className="rounded-lg bg-indigo-600 px-6 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors disabled:opacity-50 whitespace-nowrap"
 							>
-								{isConnecting ? "Connecting..." : "Connect Shopify Store"}
+								{isConnecting
+									? t("shopify.connecting")
+									: t("shopify.connectStore")}
 							</button>
 						</div>
 						<p className="mt-1 text-xs text-slate-400">
-							You'll be redirected to Shopify to authorize the app.
+							{t("shopify.redirectHelper")}
 						</p>
 					</div>
 				</div>

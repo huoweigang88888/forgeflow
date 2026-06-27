@@ -123,10 +123,11 @@ export async function uploadPolicyFile(
 	if (category) formData.append("category", category);
 	if (tags) formData.append("tags", tags.join(","));
 
-	const res = await api.post<{ code: number; message: string; data: FileUploadResult }>(
-		"/api/v1/policies/upload",
-		formData,
-	);
+	const res = await api.post<{
+		code: number;
+		message: string;
+		data: FileUploadResult;
+	}>("/api/v1/policies/upload", formData);
 	return res.data;
 }
 
@@ -147,7 +148,9 @@ export interface ChunkListData {
 	total_chunks: number;
 }
 
-export async function getChunks(sourceDocumentId: string): Promise<ChunkListData> {
+export async function getChunks(
+	sourceDocumentId: string,
+): Promise<ChunkListData> {
 	const res = await api.get<{ code: number; data: ChunkListData }>(
 		`/api/v1/policies/${sourceDocumentId}/chunks`,
 	);

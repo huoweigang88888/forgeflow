@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Clock, Inbox, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { LLMCostChart } from "@/components/dashboard/llm-cost-chart";
 import { ProcessingRateChart } from "@/components/dashboard/processing-rate-chart";
@@ -25,16 +26,8 @@ const STATUS_COLORS: Record<TicketStatus, string> = {
 	failed: "bg-red-100 text-red-700",
 };
 
-const STATUS_LABELS: Record<TicketStatus, string> = {
-	received: "Received",
-	processing: "Processing",
-	pending_approval: "Pending",
-	resolved: "Resolved",
-	escalated: "Escalated",
-	failed: "Failed",
-};
-
 export default function DashboardPage() {
+	const { t } = useTranslation();
 	const [trendDays, setTrendDays] = useState(30);
 
 	const { data: stats, isLoading: statsLoading } = useQuery({
@@ -56,47 +49,63 @@ export default function DashboardPage() {
 
 	const isLoading = statsLoading || recentLoading;
 
+	const getStatusLabel = (status: TicketStatus): string => {
+		const key: Record<TicketStatus, string> = {
+			received: "status.received",
+			processing: "status.processing",
+			pending_approval: "status.pending",
+			resolved: "status.resolved",
+			escalated: "status.escalated",
+			failed: "status.failed",
+		};
+		return t(key[status]);
+	};
+
 	return (
 		<div>
 			<div className="flex items-center justify-between mb-2">
-				<h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+				<h1 className="text-2xl font-bold text-slate-900">
+					{t("dashboard.title")}
+				</h1>
 				<Link
 					href="/dashboard/tickets"
 					className="text-sm text-brand-600 hover:text-brand-700 font-medium"
 				>
-					View all tickets →
+					{t("dashboard.viewAllTickets")}
 				</Link>
 			</div>
-			<p className="text-slate-500 mb-8">
-				After-sales automation overview for your store.
-			</p>
+			<p className="text-slate-500 mb-8">{t("dashboard.subtitle")}</p>
 
 			{/* Stats Grid */}
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
 				<StatsCard
-					label="Total Tickets"
+					label={t("dashboard.totalTickets")}
 					value={isLoading ? "—" : (stats?.total_tickets ?? 0)}
-					subtext="All time"
+					subtext={t("dashboard.allTime")}
 					icon={Inbox}
 				/>
 				<StatsCard
-					label="Auto-Resolved"
+					label={t("dashboard.autoResolved")}
 					value={isLoading ? "—" : (stats?.resolved ?? 0)}
 					subtext={
-						stats ? `${stats.auto_resolution_rate}% resolution rate` : undefined
+						stats
+							? t("dashboard.resolutionRate", {
+									rate: stats.auto_resolution_rate,
+								})
+							: undefined
 					}
 					icon={CheckCircle2}
 					trend="up"
 				/>
 				<StatsCard
-					label="Pending Approval"
+					label={t("dashboard.pendingApproval")}
 					value={isLoading ? "—" : (stats?.pending_approval ?? 0)}
-					subtext="Needs review"
+					subtext={t("dashboard.needsReview")}
 					icon={Clock}
 					trend={stats && stats.pending_approval > 0 ? "down" : "neutral"}
 				/>
 				<StatsCard
-					label="Avg. Time"
+					label={t("dashboard.avgTime")}
 					value={
 						isLoading
 							? "—"
@@ -104,7 +113,7 @@ export default function DashboardPage() {
 								? `${(stats.avg_processing_time_ms / 1000).toFixed(1)}s`
 								: "—"
 					}
-					subtext="Per ticket"
+					subtext={t("dashboard.perTicket")}
 					icon={TrendingUp}
 				/>
 			</div>
@@ -115,10 +124,10 @@ export default function DashboardPage() {
 					<div className="flex items-center justify-between">
 						<div>
 							<h3 className="text-sm font-semibold text-slate-700">
-								SLA Compliance Rate
+								{t("dashboard.slaComplianceRate")}
 							</h3>
 							<p className="text-xs text-slate-400 mt-0.5">
-								% of resolved tickets within SLA deadline
+								{t("dashboard.slaDescription")}
 							</p>
 						</div>
 						<span className="text-2xl font-bold text-brand-600">
@@ -133,7 +142,7 @@ export default function DashboardPage() {
 				<div className="bg-white rounded-xl border border-slate-200 p-5 mb-8">
 					<div className="flex items-center justify-between mb-3">
 						<h3 className="text-sm font-semibold text-slate-700">
-							Auto-Resolution Rate
+							{t("dashboard.autoResolutionRate")}
 						</h3>
 						<span className="text-sm font-bold text-brand-600">
 							{stats.auto_resolution_rate}%
@@ -147,10 +156,16 @@ export default function DashboardPage() {
 					</div>
 					<div className="flex justify-between mt-2 text-xs text-slate-400">
 						<span>
-							{stats.resolved} of {stats.total_tickets} resolved
+							{t("dashboard.resolvedOfTotal", {
+								resolved: stats.resolved,
+								total: stats.total_tickets,
+							})}
 						</span>
 						<span>
-							{stats.escalated} escalated · {stats.failed} failed
+							{t("dashboard.escalatedFailed", {
+								escalated: stats.escalated,
+								failed: stats.failed,
+							})}
 						</span>
 					</div>
 				</div>
@@ -179,19 +194,19 @@ export default function DashboardPage() {
 			<div className="bg-white rounded-xl border border-slate-200">
 				<div className="px-5 py-4 border-b border-slate-100">
 					<h3 className="text-sm font-semibold text-slate-700">
-						Recent Tickets
+						{t("dashboard.recentTickets")}
 					</h3>
 				</div>
 				{recentLoading ? (
 					<div className="p-8 text-center">
-						<p className="text-slate-400">Loading...</p>
+						<p className="text-slate-400">{t("common.loading")}</p>
 					</div>
 				) : !recent || recent.tickets.length === 0 ? (
 					<div className="p-8 text-center">
 						<Inbox size={32} className="mx-auto text-slate-300 mb-3" />
-						<p className="text-slate-400">No tickets yet.</p>
+						<p className="text-slate-400">{t("dashboard.noTickets")}</p>
 						<p className="text-xs text-slate-300 mt-1">
-							Create a ticket via the API to see it here.
+							{t("dashboard.createTicketHint")}
 						</p>
 					</div>
 				) : (
@@ -212,7 +227,7 @@ export default function DashboardPage() {
 												STATUS_COLORS[ticket.status]
 											}`}
 										>
-											{STATUS_LABELS[ticket.status]}
+											{getStatusLabel(ticket.status)}
 										</span>
 									</div>
 									<p className="text-sm text-slate-600 truncate mt-0.5">

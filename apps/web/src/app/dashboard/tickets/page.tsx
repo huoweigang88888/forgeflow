@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { FilterBar } from "@/components/tickets/filter-bar";
 import { TicketTable } from "@/components/tickets/ticket-table";
@@ -11,6 +12,7 @@ import { listTickets } from "@/lib/tickets";
 export default function TicketsPage() {
 	const { status, platform, page, pageSize, setStatus, setPlatform, setPage } =
 		useTicketFilterStore();
+	const { t } = useTranslation();
 
 	const { data, isLoading } = useQuery({
 		queryKey: ["tickets", { page, pageSize, status, platform }],
@@ -27,10 +29,10 @@ export default function TicketsPage() {
 
 	return (
 		<div>
-			<h1 className="text-2xl font-bold text-slate-900 mb-2">Tickets</h1>
-			<p className="text-slate-500 mb-6">
-				View and manage after-sales support tickets.
-			</p>
+			<h1 className="text-2xl font-bold text-slate-900 mb-2">
+				{t("tickets.title")}
+			</h1>
+			<p className="text-slate-500 mb-6">{t("tickets.subtitle")}</p>
 
 			{/* Filters */}
 			<div className="mb-4">
@@ -49,7 +51,8 @@ export default function TicketsPage() {
 			{totalPages > 1 && (
 				<div className="flex items-center justify-between mt-4">
 					<p className="text-sm text-slate-500">
-						{data?.total ?? 0} tickets total · Page {page} of {totalPages}
+						{t("tickets.ticketsTotal", { total: data?.total ?? 0 })} ·{" "}
+						{t("tickets.pageOf", { page, totalPages })}
 					</p>
 					<div className="flex gap-2">
 						<button
@@ -59,7 +62,7 @@ export default function TicketsPage() {
 							className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
 						>
 							<ChevronLeft size={14} />
-							Previous
+							{t("common.previous")}
 						</button>
 						<button
 							type="button"
@@ -67,7 +70,7 @@ export default function TicketsPage() {
 							disabled={page >= totalPages}
 							className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
 						>
-							Next
+							{t("common.next")}
 							<ChevronRight size={14} />
 						</button>
 					</div>

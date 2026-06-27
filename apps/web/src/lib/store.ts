@@ -44,7 +44,8 @@ export const useTicketFilterStore = create<TicketFilterState>((set) => ({
 	setPlatform: (platform) => set({ platform, page: 1 }),
 	setPage: (page) => set({ page }),
 	setPageSize: (pageSize) => set({ pageSize, page: 1 }),
-	resetFilters: () => set({ status: "all", platform: "all", page: 1, pageSize: 20 }),
+	resetFilters: () =>
+		set({ status: "all", platform: "all", page: 1, pageSize: 20 }),
 }));
 
 // ── Approval Queue State ──

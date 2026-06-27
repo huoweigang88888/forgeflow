@@ -7,11 +7,13 @@ import type { TicketListItem } from "@/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 export default function ApprovalsPage() {
 	const queryClient = useQueryClient();
 	const { setSubmitting } = useApprovalStore();
 	const [processingId, setProcessingId] = useState<string | null>(null);
+	const { t } = useTranslation();
 
 	const { data, isLoading, isError } = useQuery({
 		queryKey: ["tickets", { status: "pending_approval" }],
@@ -55,28 +57,28 @@ export default function ApprovalsPage() {
 	return (
 		<div>
 			<div className="flex items-center justify-between mb-2">
-				<h1 className="text-2xl font-bold text-slate-900">Approvals</h1>
+				<h1 className="text-2xl font-bold text-slate-900">
+					{t("approvals.title")}
+				</h1>
 				{tickets.length > 0 && (
 					<span className="text-sm text-slate-500">
-						{tickets.length} pending
+						{t("approvals.pending", { n: tickets.length })}
 					</span>
 				)}
 			</div>
-			<p className="text-slate-500 mb-6">
-				Review and approve pending high-risk operations.
-			</p>
+			<p className="text-slate-500 mb-6">{t("approvals.subtitle")}</p>
 
 			{/* Loading */}
 			{isLoading && (
 				<div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-					<p className="text-slate-400">Loading pending approvals...</p>
+					<p className="text-slate-400">{t("approvals.loading")}</p>
 				</div>
 			)}
 
 			{/* Error */}
 			{isError && (
 				<div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-					<p className="text-red-500">Failed to load approvals.</p>
+					<p className="text-red-500">{t("approvals.failedToLoad")}</p>
 				</div>
 			)}
 
@@ -84,9 +86,11 @@ export default function ApprovalsPage() {
 			{!isLoading && !isError && tickets.length === 0 && (
 				<div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
 					<CheckCircle2 size={40} className="mx-auto text-green-300 mb-4" />
-					<p className="text-slate-500 font-medium">All clear!</p>
+					<p className="text-slate-500 font-medium">
+						{t("approvals.allClear")}
+					</p>
 					<p className="text-sm text-slate-400 mt-1">
-						No tickets are waiting for approval.
+						{t("approvals.noTickets")}
 					</p>
 				</div>
 			)}

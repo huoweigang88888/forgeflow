@@ -1,6 +1,7 @@
 "use client";
 
 import type { TrendPoint } from "@/types";
+import { useTranslation } from "react-i18next";
 import {
 	CartesianGrid,
 	Legend,
@@ -18,13 +19,19 @@ interface TrendLineChartProps {
 	onDaysChange: (days: number) => void;
 }
 
-export function TrendLineChart({ data, days, onDaysChange }: TrendLineChartProps) {
+export function TrendLineChart({
+	data,
+	days,
+	onDaysChange,
+}: TrendLineChartProps) {
+	const { t } = useTranslation();
+
 	if (!data || data.length === 0) {
 		return (
 			<div className="bg-white rounded-xl border border-slate-200 p-5">
 				<div className="flex items-center justify-between mb-4">
 					<h3 className="text-sm font-semibold text-slate-700">
-						Auto-Resolution Rate Trend
+						{t("charts.autoResolveRateTrend")}
 					</h3>
 					<div className="flex gap-1">
 						{[7, 30].map((d) => (
@@ -38,13 +45,13 @@ export function TrendLineChart({ data, days, onDaysChange }: TrendLineChartProps
 										: "text-slate-500 hover:bg-slate-100"
 								}`}
 							>
-								{d}d
+								{d === 7 ? t("charts.days7") : t("charts.days30")}
 							</button>
 						))}
 					</div>
 				</div>
 				<p className="text-sm text-slate-400 text-center py-8">
-					No trend data available yet.
+					{t("charts.noTrendData")}
 				</p>
 			</div>
 		);
@@ -54,7 +61,7 @@ export function TrendLineChart({ data, days, onDaysChange }: TrendLineChartProps
 		<div className="bg-white rounded-xl border border-slate-200 p-5">
 			<div className="flex items-center justify-between mb-4">
 				<h3 className="text-sm font-semibold text-slate-700">
-					Auto-Resolution Rate Trend
+					{t("charts.autoResolveRateTrend")}
 				</h3>
 				<div className="flex gap-1">
 					{[7, 30].map((d) => (
@@ -68,7 +75,7 @@ export function TrendLineChart({ data, days, onDaysChange }: TrendLineChartProps
 									: "text-slate-500 hover:bg-slate-100"
 							}`}
 						>
-							{d}d
+							{d === 7 ? t("charts.days7") : t("charts.days30")}
 						</button>
 					))}
 				</div>
@@ -87,8 +94,11 @@ export function TrendLineChart({ data, days, onDaysChange }: TrendLineChartProps
 						tickFormatter={(v: number) => `${v}%`}
 					/>
 					<Tooltip
-						formatter={(value) => [`${Number(value)}%`, "Resolution Rate"]}
-						labelFormatter={(label) => `Date: ${label}`}
+						formatter={(value) => [
+							`${Number(value)}%`,
+							t("charts.resolutionRate"),
+						]}
+						labelFormatter={(label) => t("charts.dateLabel", { label })}
 					/>
 					<Legend />
 					<Line
@@ -97,7 +107,7 @@ export function TrendLineChart({ data, days, onDaysChange }: TrendLineChartProps
 						stroke="#6366f1"
 						strokeWidth={2}
 						dot={{ r: 3 }}
-						name="Auto-Resolve Rate"
+						name={t("charts.autoResolveRate")}
 					/>
 				</LineChart>
 			</ResponsiveContainer>

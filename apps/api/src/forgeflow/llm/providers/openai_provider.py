@@ -22,10 +22,13 @@ class OpenAIProvider(LLMProvider):
         super().__init__(model, **kwargs)
         settings = get_settings()
         api_key = settings.llm.openai_api_key
+        base_url = settings.llm.openai_base_url
+
+        client_kwargs: dict[str, Any] = {"base_url": base_url}
         if api_key:
-            self.client = AsyncOpenAI(api_key=api_key.get_secret_value())
-        else:
-            self.client = AsyncOpenAI()  # Falls back to OPENAI_API_KEY env var
+            client_kwargs["api_key"] = api_key.get_secret_value()
+
+        self.client = AsyncOpenAI(**client_kwargs)
 
     @property
     def provider_name(self) -> str:

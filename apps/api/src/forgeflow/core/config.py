@@ -63,6 +63,7 @@ class LLMSettings(BaseSettings):
     default_model: str = "deepseek-chat"
     complex_model: str = "deepseek-chat"
     openai_api_key: SecretStr | None = None
+    openai_base_url: str = "https://api.openai.com/v1"
     anthropic_api_key: SecretStr | None = None
     qwen_api_key: SecretStr | None = None
     qwen_base_url: str = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"

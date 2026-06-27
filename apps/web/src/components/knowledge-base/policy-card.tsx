@@ -3,6 +3,7 @@
 import type { PolicyDocument } from "@/types";
 import { Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface PolicyCardProps {
 	policy: PolicyDocument;
@@ -18,6 +19,7 @@ export function PolicyCard({
 	isDeleting,
 }: PolicyCardProps) {
 	const [confirmDelete, setConfirmDelete] = useState(false);
+	const { t } = useTranslation();
 
 	const categoryColors: Record<string, string> = {
 		shipping: "bg-blue-100 text-blue-700",
@@ -26,8 +28,16 @@ export function PolicyCard({
 		general: "bg-slate-100 text-slate-700",
 	};
 
-	const categoryLabel = policy.category || "general";
-	const categoryClass = categoryColors[categoryLabel] || categoryColors.general;
+	const categoryKey = policy.category || "general";
+	const categoryClass = categoryColors[categoryKey] || categoryColors.general;
+
+	const categoryLabelMap: Record<string, string> = {
+		shipping: t("knowledgeBase.categoryShipping"),
+		refund: t("knowledgeBase.categoryRefund"),
+		exchange: t("knowledgeBase.categoryExchange"),
+		general: t("knowledgeBase.categoryGeneral"),
+	};
+	const categoryLabel = categoryLabelMap[categoryKey] || categoryKey;
 
 	return (
 		<div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-sm transition-shadow">
@@ -65,7 +75,9 @@ export function PolicyCard({
 
 				<div className="flex items-center gap-2">
 					{!policy.is_active && (
-						<span className="text-red-400 font-medium">Inactive</span>
+						<span className="text-red-400 font-medium">
+							{t("knowledgeBase.inactive")}
+						</span>
 					)}
 					{confirmDelete ? (
 						<span className="flex items-center gap-1">
@@ -78,14 +90,14 @@ export function PolicyCard({
 								disabled={isDeleting}
 								className="text-red-600 hover:text-red-700 font-medium disabled:opacity-50"
 							>
-								{isDeleting ? "Deleting..." : "Confirm"}
+								{isDeleting ? t("knowledgeBase.deleting") : t("common.confirm")}
 							</button>
 							<button
 								type="button"
 								onClick={() => setConfirmDelete(false)}
 								className="text-slate-400 hover:text-slate-600"
 							>
-								Cancel
+								{t("common.cancel")}
 							</button>
 						</span>
 					) : (
@@ -93,7 +105,7 @@ export function PolicyCard({
 							type="button"
 							onClick={() => setConfirmDelete(true)}
 							className="text-slate-400 hover:text-red-500 transition-colors"
-							title="Delete policy"
+							title={t("common.delete")}
 						>
 							<Trash2 size={14} />
 						</button>

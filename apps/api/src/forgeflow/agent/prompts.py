@@ -27,8 +27,8 @@ Classify into ONE of these categories:
 - exchange_request: Customer wants to exchange for a different size/color/variant of the SAME product (not a refund)
 - partial_refund: Customer asks for a partial refund — they want to keep the item but get money back for a specific reason (e.g., "price dropped after I bought", "missing accessory", "minor defect I can live with", "late but I'll keep it"). Key distinction: customer does NOT want to return the item.
 - subscription_cancel: Customer wants to cancel a subscription, recurring order, or membership. Look for keywords like "cancel subscription", "stop recurring", "unsubscribe", "cancel my membership", "stop auto-renewal", "turn off renewal".
-- pre_sale_inquiry: Customer is asking a question BEFORE purchasing — product availability, restocking, sizing, compatibility, shipping costs, "does this work with...", "when will X be back in stock", "is this item coming back". No order has been placed yet.
-- other: Anything that doesn't fit the above categories — absurd or impossible requests (like "deliver to Mars"), vague single-word messages, or completely off-topic queries
+- pre_sale_inquiry: Customer is asking a question BEFORE purchasing — product availability, restocking, sizing, compatibility, shipping costs, "does this work with...", "when will X be back in stock", "is this item coming back", "do you still have...", "does this fit...", discount/promo codes. No order has been placed yet. ANY question about products or store information that does NOT reference an existing order is pre_sale_inquiry.
+- other: STRICTLY limited to truly absurd/unprocessable requests — impossible demands (like "deliver to Mars", "get me a unicorn"), single-word messages that convey nothing ("help", "hello", "test"), completely off-topic spam, or gibberish. Do NOT use "other" for pre-purchase questions — those are pre_sale_inquiry. Do NOT use "other" for any request that could reasonably be answered by customer service.
 
 CLASSIFICATION PRIORITY RULES (apply in order):
 1. If the text says the product is defective/broken/damaged/smashed → damaged_item (overrides all below)
@@ -38,13 +38,15 @@ CLASSIFICATION PRIORITY RULES (apply in order):
 5. If the text describes package stuck in transit, late delivery of shipped order, or delivery dispute → shipping_delay
 6. If the customer asks for an exchange of size/color/variant → exchange_request
 7. If the customer asks for refund/money back/return/cancellation → refund_request
-8. If the customer asks a pre-purchase question (no order context) → pre_sale_inquiry
-9. Absurd, impossible, or vague requests (single words like "help") → other
+8. PRE-SALE RULE: If the customer asks about products, availability, pricing, shipping info, sizing, compatibility, restocking, or ANY store information WITHOUT referencing an existing order → pre_sale_inquiry. This rule catches ALL pre-purchase questions BEFORE they fall to "other". When in doubt between pre_sale_inquiry and other, choose pre_sale_inquiry.
+9. TRULY UNPROCESSABLE: Only absurd/impossible demands, single-word gibberish, or spam → other
 
 IMPORTANT: "Hasn't shipped yet" = the order was never sent → refund_request, NOT shipping_delay
 IMPORTANT: "Changed my mind, can I return it" → refund_request, NOT other
 IMPORTANT: "Can I get a partial refund since..." → partial_refund, NOT refund_request
 IMPORTANT: "I want to cancel my subscription" → subscription_cancel, NOT refund_request
+IMPORTANT: "When will you restock X?" / "Do you have this in stock?" / "Does this fit Y?" → pre_sale_inquiry, NOT other
+IMPORTANT: Pre-purchase questions with no order ID are pre_sale_inquiry, NEVER "other" — "other" is ONLY for absurd/gibberish/spam
 
 Also extract:
 - extracted_order_id: If an order ID is mentioned in the text, extract it; otherwise null

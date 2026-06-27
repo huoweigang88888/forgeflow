@@ -3,6 +3,7 @@
 import { useAuthStore } from "@/lib/auth-store";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 /**
  * Shopify OAuth Callback Page.
@@ -12,6 +13,8 @@ import { Suspense, useEffect, useState } from "react";
  * Route: /auth/shopify/callback?code={}&shop={}&hmac={}&state={}&timestamp={}
  */
 export default function ShopifyCallbackPage() {
+	const { t } = useTranslation();
+
 	return (
 		<Suspense
 			fallback={
@@ -19,7 +22,7 @@ export default function ShopifyCallbackPage() {
 					<div className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg border border-slate-200 text-center">
 						<div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
 						<h1 className="text-lg font-semibold text-slate-800 mb-2">
-							Loading...
+							{t("auth.loading")}
 						</h1>
 					</div>
 				</div>
@@ -34,6 +37,7 @@ function ShopifyCallbackInner() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const { setToken } = useAuthStore();
+	const { t } = useTranslation();
 
 	const [status, setStatus] = useState<"connecting" | "error" | "done">(
 		"connecting",
@@ -50,9 +54,7 @@ function ShopifyCallbackInner() {
 		// Validate required params
 		if (!code || !shop || !hmac || !state) {
 			setStatus("error");
-			setErrorMessage(
-				"Missing required OAuth parameters. Please try connecting again.",
-			);
+			setErrorMessage(t("auth.missingParams"));
 			return;
 		}
 
@@ -74,7 +76,7 @@ function ShopifyCallbackInner() {
 					throw new Error(
 						errData.detail?.error_description ||
 							errData.message ||
-							"Failed to connect",
+							t("auth.failedToConnect"),
 					);
 				}
 				return response.json();
@@ -92,11 +94,9 @@ function ShopifyCallbackInner() {
 			})
 			.catch((err) => {
 				setStatus("error");
-				setErrorMessage(
-					err.message || "An unexpected error occurred during OAuth.",
-				);
+				setErrorMessage(err.message || t("auth.unexpectedError"));
 			});
-	}, [searchParams, router, setToken]);
+	}, [searchParams, router, setToken, t]);
 
 	return (
 		<div className="flex min-h-screen items-center justify-center bg-slate-50">
@@ -105,12 +105,9 @@ function ShopifyCallbackInner() {
 					<>
 						<div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
 						<h1 className="text-lg font-semibold text-slate-800 mb-2">
-							Connecting your Shopify store...
+							{t("auth.connecting")}
 						</h1>
-						<p className="text-sm text-slate-500">
-							Exchanging authorization code and saving your credentials
-							securely.
-						</p>
+						<p className="text-sm text-slate-500">{t("auth.connectingDesc")}</p>
 					</>
 				)}
 
@@ -125,7 +122,7 @@ function ShopifyCallbackInner() {
 								stroke="currentColor"
 								aria-hidden="true"
 							>
-								<title>Success</title>
+								<title>{t("auth.success")}</title>
 								<path
 									strokeLinecap="round"
 									strokeLinejoin="round"
@@ -134,9 +131,9 @@ function ShopifyCallbackInner() {
 							</svg>
 						</div>
 						<h1 className="text-lg font-semibold text-slate-800 mb-2">
-							Store Connected!
+							{t("auth.connected")}
 						</h1>
-						<p className="text-sm text-slate-500">Redirecting to settings...</p>
+						<p className="text-sm text-slate-500">{t("auth.redirecting")}</p>
 					</>
 				)}
 
@@ -150,7 +147,7 @@ function ShopifyCallbackInner() {
 								strokeWidth={2}
 								stroke="currentColor"
 							>
-								<title>Error</title>
+								<title>{t("auth.error")}</title>
 								<path
 									strokeLinecap="round"
 									strokeLinejoin="round"
@@ -159,7 +156,7 @@ function ShopifyCallbackInner() {
 							</svg>
 						</div>
 						<h1 className="text-lg font-semibold text-slate-800 mb-2">
-							Connection Failed
+							{t("auth.connectionFailed")}
 						</h1>
 						<p className="text-sm text-red-600 mb-4">{errorMessage}</p>
 						<button
@@ -167,7 +164,7 @@ function ShopifyCallbackInner() {
 							onClick={() => router.push("/dashboard/settings")}
 							className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
 						>
-							Back to Settings
+							{t("auth.backToSettings")}
 						</button>
 					</>
 				)}

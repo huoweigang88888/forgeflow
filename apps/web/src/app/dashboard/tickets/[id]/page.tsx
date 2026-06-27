@@ -16,6 +16,7 @@ import { ArrowLeft, Wifi, WifiOff } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 const STATUS_COLORS: Record<string, string> = {
 	received: "bg-slate-100 text-slate-700",
@@ -26,23 +27,27 @@ const STATUS_COLORS: Record<string, string> = {
 	failed: "bg-red-100 text-red-700",
 };
 
-const STATUS_LABELS: Record<string, string> = {
-	received: "Received",
-	processing: "Processing",
-	pending_approval: "Pending Approval",
-	resolved: "Resolved",
-	escalated: "Escalated",
-	failed: "Failed",
-};
-
 export default function TicketDetailPage() {
 	const params = useParams<{ id: string }>();
 	const _router = useRouter();
 	const queryClient = useQueryClient();
 	const ticketId = params.id;
 	const { setSubmitting } = useApprovalStore();
+	const { t } = useTranslation();
 
 	const [isApproving, setIsApproving] = useState(false);
+
+	const getStatusLabel = (status: string): string => {
+		const key: Record<string, string> = {
+			received: "status.received",
+			processing: "status.processing",
+			pending_approval: "status.pendingApproval",
+			resolved: "status.resolved",
+			escalated: "status.escalated",
+			failed: "status.failed",
+		};
+		return t(key[status] ?? status);
+	};
 
 	// ── REST initial load ──
 	const {
@@ -63,7 +68,6 @@ export default function TicketDetailPage() {
 	const { lastEvent, isConnected } = useWebSocket({
 		ticketId,
 		onEvent: (event) => {
-			// Invalidate queries so the UI refreshes with latest data
 			if (
 				event.type === "completed" ||
 				event.type === "pending_approval" ||
@@ -126,10 +130,10 @@ export default function TicketDetailPage() {
 					className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-4"
 				>
 					<ArrowLeft size={14} />
-					Back to tickets
+					{t("tickets.backToTickets")}
 				</Link>
 				<div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-					<p className="text-slate-400">Loading ticket details...</p>
+					<p className="text-slate-400">{t("tickets.loadingDetail")}</p>
 				</div>
 			</div>
 		);
@@ -144,12 +148,12 @@ export default function TicketDetailPage() {
 					className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-4"
 				>
 					<ArrowLeft size={14} />
-					Back to tickets
+					{t("tickets.backToTickets")}
 				</Link>
 				<div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-					<p className="text-red-500">Failed to load ticket.</p>
+					<p className="text-red-500">{t("tickets.failedToLoad")}</p>
 					<p className="text-xs text-slate-400 mt-1">
-						The ticket may not exist or the API is unavailable.
+						{t("tickets.ticketUnavailable")}
 					</p>
 				</div>
 			</div>
@@ -180,7 +184,7 @@ export default function TicketDetailPage() {
 							STATUS_COLORS[status] ?? "bg-slate-100 text-slate-700"
 						}`}
 					>
-						{STATUS_LABELS[status] ?? status}
+						{getStatusLabel(status)}
 					</span>
 					{/* WebSocket indicator */}
 					<span
@@ -189,7 +193,7 @@ export default function TicketDetailPage() {
 						}`}
 					>
 						{isConnected ? <Wifi size={12} /> : <WifiOff size={12} />}
-						{isConnected ? "Live" : "Polling"}
+						{isConnected ? t("tickets.live") : t("tickets.polling")}
 					</span>
 				</div>
 
@@ -200,7 +204,7 @@ export default function TicketDetailPage() {
 						onClick={handleCancel}
 						className="px-3 py-1.5 text-xs font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
 					>
-						Cancel Ticket
+						{t("tickets.cancelTicket")}
 					</button>
 				)}
 			</div>
@@ -211,31 +215,31 @@ export default function TicketDetailPage() {
 					{/* Customer & Issue Info */}
 					<div className="bg-white rounded-xl border border-slate-200 p-5">
 						<h3 className="text-sm font-semibold text-slate-700 mb-3">
-							Ticket Information
+							{t("tickets.ticketInformation")}
 						</h3>
 						<dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
 							<div>
-								<dt className="text-slate-400">Customer</dt>
+								<dt className="text-slate-400">{t("tickets.customerLabel")}</dt>
 								<dd className="text-slate-900 font-medium">
 									{ticket.customer_name || ticket.customer_email}
 								</dd>
 							</div>
 							<div>
-								<dt className="text-slate-400">Email</dt>
+								<dt className="text-slate-400">{t("tickets.email")}</dt>
 								<dd className="text-slate-900">{ticket.customer_email}</dd>
 							</div>
 							<div>
-								<dt className="text-slate-400">Platform</dt>
+								<dt className="text-slate-400">{t("tickets.platformLabel")}</dt>
 								<dd className="text-slate-900 capitalize">{ticket.platform}</dd>
 							</div>
 							<div>
-								<dt className="text-slate-400">Order ID</dt>
+								<dt className="text-slate-400">{t("tickets.orderId")}</dt>
 								<dd className="text-slate-900 font-mono text-xs">
 									{ticket.order_id || "—"}
 								</dd>
 							</div>
 							<div className="sm:col-span-2">
-								<dt className="text-slate-400">Issue</dt>
+								<dt className="text-slate-400">{t("tickets.issue")}</dt>
 								<dd className="text-slate-900 mt-1 leading-relaxed">
 									{ticket.issue_text}
 								</dd>
@@ -246,17 +250,21 @@ export default function TicketDetailPage() {
 					{/* Agent Analysis */}
 					<div className="bg-white rounded-xl border border-slate-200 p-5">
 						<h3 className="text-sm font-semibold text-slate-700 mb-3">
-							Agent Analysis
+							{t("tickets.agentAnalysis")}
 						</h3>
 						<div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-sm">
 							<div>
-								<dt className="text-slate-400 text-xs">Intent</dt>
+								<dt className="text-slate-400 text-xs">
+									{t("tickets.intent")}
+								</dt>
 								<dd className="text-slate-900 font-medium mt-0.5 capitalize">
 									{ticket.intent?.replace(/_/g, " ") ?? "—"}
 								</dd>
 							</div>
 							<div>
-								<dt className="text-slate-400 text-xs">Confidence</dt>
+								<dt className="text-slate-400 text-xs">
+									{t("tickets.confidence")}
+								</dt>
 								<dd className="text-slate-900 font-medium mt-0.5">
 									{ticket.confidence != null
 										? `${(ticket.confidence * 100).toFixed(0)}%`
@@ -264,19 +272,25 @@ export default function TicketDetailPage() {
 								</dd>
 							</div>
 							<div>
-								<dt className="text-slate-400 text-xs">Urgency</dt>
+								<dt className="text-slate-400 text-xs">
+									{t("tickets.urgency")}
+								</dt>
 								<dd className="text-slate-900 font-medium mt-0.5 capitalize">
 									{ticket.urgency ?? "—"}
 								</dd>
 							</div>
 							<div>
-								<dt className="text-slate-400 text-xs">Sentiment</dt>
+								<dt className="text-slate-400 text-xs">
+									{t("tickets.sentiment")}
+								</dt>
 								<dd className="text-slate-900 font-medium mt-0.5 capitalize">
 									{ticket.sentiment ?? "—"}
 								</dd>
 							</div>
 							<div>
-								<dt className="text-slate-400 text-xs">Language</dt>
+								<dt className="text-slate-400 text-xs">
+									{t("tickets.language")}
+								</dt>
 								<dd className="text-slate-900 font-medium mt-0.5 uppercase">
 									{ticket.issue_language ?? "—"}
 								</dd>
@@ -289,7 +303,7 @@ export default function TicketDetailPage() {
 								<div className="grid grid-cols-2 gap-3 text-sm mb-3">
 									<div>
 										<span className="text-slate-400 text-xs">
-											Recommended Action
+											{t("tickets.recommendedAction")}
 										</span>
 										<p className="text-slate-900 font-medium capitalize">
 											{ticket.recommended_action.replace(/_/g, " ")}
@@ -298,7 +312,7 @@ export default function TicketDetailPage() {
 									{ticket.refund_amount != null && ticket.refund_amount > 0 && (
 										<div>
 											<span className="text-slate-400 text-xs">
-												Refund Amount
+												{t("tickets.refundAmount")}
 											</span>
 											<p className="text-slate-900 font-medium">
 												${ticket.refund_amount.toFixed(2)}
@@ -308,7 +322,9 @@ export default function TicketDetailPage() {
 								</div>
 								{ticket.decision_explanation && (
 									<div className="bg-slate-50 rounded-lg p-3">
-										<span className="text-xs text-slate-400">Reasoning</span>
+										<span className="text-xs text-slate-400">
+											{t("tickets.reasoning")}
+										</span>
 										<p className="text-sm text-slate-700 mt-1 leading-relaxed">
 											{ticket.decision_explanation}
 										</p>
@@ -328,7 +344,7 @@ export default function TicketDetailPage() {
 					{ticket.execution_result && (
 						<div className="bg-white rounded-xl border border-slate-200 p-5">
 							<h3 className="text-sm font-semibold text-slate-700 mb-3">
-								Execution Result
+								{t("tickets.executionResult")}
 							</h3>
 							<pre className="text-xs text-slate-600 bg-slate-50 rounded-lg p-3 overflow-auto max-h-48">
 								{JSON.stringify(ticket.execution_result, null, 2)}
@@ -339,7 +355,9 @@ export default function TicketDetailPage() {
 					{/* Error (if any) */}
 					{ticket.error_message && (
 						<div className="bg-red-50 border border-red-200 rounded-xl p-5">
-							<h3 className="text-sm font-semibold text-red-700 mb-1">Error</h3>
+							<h3 className="text-sm font-semibold text-red-700 mb-1">
+								{t("tickets.error")}
+							</h3>
 							<p className="text-sm text-red-600">{ticket.error_message}</p>
 						</div>
 					)}
@@ -360,7 +378,7 @@ export default function TicketDetailPage() {
 					{lastEvent && (
 						<div className="bg-white rounded-xl border border-slate-200 p-5">
 							<h3 className="text-sm font-semibold text-slate-700 mb-2">
-								Latest Event
+								{t("tickets.latestEvent")}
 							</h3>
 							<div className="text-xs font-mono bg-slate-50 rounded-lg p-3 overflow-auto max-h-48">
 								<pre>{JSON.stringify(lastEvent, null, 2)}</pre>
@@ -371,11 +389,11 @@ export default function TicketDetailPage() {
 					{/* Meta info */}
 					<div className="bg-white rounded-xl border border-slate-200 p-5">
 						<h3 className="text-sm font-semibold text-slate-700 mb-2">
-							Processing Info
+							{t("tickets.processingInfo")}
 						</h3>
 						<dl className="text-xs space-y-2">
 							<div className="flex justify-between">
-								<dt className="text-slate-400">Duration</dt>
+								<dt className="text-slate-400">{t("tickets.duration")}</dt>
 								<dd className="text-slate-700">
 									{ticket.processing_duration_ms != null
 										? `${(ticket.processing_duration_ms / 1000).toFixed(1)}s`
@@ -383,11 +401,11 @@ export default function TicketDetailPage() {
 								</dd>
 							</div>
 							<div className="flex justify-between">
-								<dt className="text-slate-400">Retries</dt>
+								<dt className="text-slate-400">{t("tickets.retries")}</dt>
 								<dd className="text-slate-700">{ticket.retry_count}</dd>
 							</div>
 							<div className="flex justify-between">
-								<dt className="text-slate-400">Created</dt>
+								<dt className="text-slate-400">{t("tickets.created")}</dt>
 								<dd className="text-slate-700">
 									{ticket.created_at
 										? new Date(ticket.created_at).toLocaleString()
@@ -396,7 +414,7 @@ export default function TicketDetailPage() {
 							</div>
 							{ticket.completed_at && (
 								<div className="flex justify-between">
-									<dt className="text-slate-400">Completed</dt>
+									<dt className="text-slate-400">{t("tickets.completed")}</dt>
 									<dd className="text-slate-700">
 										{new Date(ticket.completed_at).toLocaleString()}
 									</dd>

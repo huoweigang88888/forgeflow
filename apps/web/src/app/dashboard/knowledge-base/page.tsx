@@ -11,6 +11,7 @@ import {
 	X,
 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { FileUploadModal } from "@/components/knowledge-base/file-upload-modal";
 import { PolicyCard } from "@/components/knowledge-base/policy-card";
@@ -24,14 +25,6 @@ import {
 import { useKnowledgeBaseStore } from "@/lib/store";
 import type { PolicyDocument, PolicySearchHit } from "@/types";
 
-const CATEGORIES = [
-	{ value: null, label: "All" },
-	{ value: "shipping", label: "Shipping" },
-	{ value: "refund", label: "Refund" },
-	{ value: "exchange", label: "Exchange" },
-	{ value: "general", label: "General" },
-];
-
 export default function KnowledgeBasePage() {
 	const queryClient = useQueryClient();
 	const {
@@ -44,10 +37,19 @@ export default function KnowledgeBasePage() {
 		setUploadOpen,
 		setPage,
 	} = useKnowledgeBaseStore();
+	const { t } = useTranslation();
 
 	const [deletingId, setDeletingId] = useState<string | null>(null);
 	const [showSearchConsole, setShowSearchConsole] = useState(false);
 	const [uploadTab, setUploadTab] = useState<"text" | "file">("text");
+
+	const CATEGORIES = [
+		{ value: null, label: t("knowledgeBase.categoryAll") },
+		{ value: "shipping", label: t("knowledgeBase.categoryShipping") },
+		{ value: "refund", label: t("knowledgeBase.categoryRefund") },
+		{ value: "exchange", label: t("knowledgeBase.categoryExchange") },
+		{ value: "general", label: t("knowledgeBase.categoryGeneral") },
+	];
 
 	// ── List policies ──
 	const {
@@ -102,10 +104,10 @@ export default function KnowledgeBasePage() {
 			{/* Header */}
 			<div className="flex items-center justify-between mb-2">
 				<div>
-					<h1 className="text-2xl font-bold text-slate-900">Knowledge Base</h1>
-					<p className="text-slate-500 mt-1">
-						Manage store policies used by the AI agent for decision making.
-					</p>
+					<h1 className="text-2xl font-bold text-slate-900">
+						{t("knowledgeBase.title")}
+					</h1>
+					<p className="text-slate-500 mt-1">{t("knowledgeBase.subtitle")}</p>
 				</div>
 				<button
 					type="button"
@@ -113,7 +115,7 @@ export default function KnowledgeBasePage() {
 					className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 transition-colors"
 				>
 					<Plus size={16} />
-					Upload Policy
+					{t("knowledgeBase.uploadPolicy")}
 				</button>
 			</div>
 
@@ -131,7 +133,7 @@ export default function KnowledgeBasePage() {
 							setSearchQuery(e.target.value);
 							setPage(1);
 						}}
-						placeholder="Search policies..."
+						placeholder={t("knowledgeBase.searchPlaceholder")}
 						className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-8 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
 					/>
 					{searchQuery && (
@@ -176,7 +178,9 @@ export default function KnowledgeBasePage() {
 			{(isLoading || isSearching) && (
 				<div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
 					<p className="text-slate-400">
-						{isSearchActive ? "Searching policies..." : "Loading policies..."}
+						{isSearchActive
+							? t("knowledgeBase.searchingPolicies")
+							: t("knowledgeBase.loadingPolicies")}
 					</p>
 				</div>
 			)}
@@ -184,7 +188,7 @@ export default function KnowledgeBasePage() {
 			{/* Error */}
 			{isError && (
 				<div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-					<p className="text-red-500">Failed to load policies.</p>
+					<p className="text-red-500">{t("knowledgeBase.failedToLoad")}</p>
 				</div>
 			)}
 
@@ -194,10 +198,11 @@ export default function KnowledgeBasePage() {
 					{!isSearchActive && policies.length === 0 && (
 						<div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
 							<BookOpen size={40} className="mx-auto text-slate-300 mb-4" />
-							<p className="text-slate-500 font-medium">No policies yet</p>
+							<p className="text-slate-500 font-medium">
+								{t("knowledgeBase.noPolicies")}
+							</p>
 							<p className="text-sm text-slate-400 mt-1">
-								Upload your store policies so the AI agent can make better
-								decisions.
+								{t("knowledgeBase.uploadHint")}
 							</p>
 						</div>
 					)}
@@ -205,7 +210,7 @@ export default function KnowledgeBasePage() {
 					{isSearchActive && searchHits.length === 0 && (
 						<div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
 							<p className="text-slate-400">
-								No policies match &ldquo;{searchQuery}&rdquo;
+								{t("knowledgeBase.noResults", { query: searchQuery })}
 							</p>
 						</div>
 					)}
@@ -247,7 +252,7 @@ export default function KnowledgeBasePage() {
 										<ChevronLeft size={16} />
 									</button>
 									<span className="text-sm text-slate-500">
-										Page {page} of {totalPages}
+										{t("knowledgeBase.pageOf", { page, totalPages })}
 									</span>
 									<button
 										type="button"
@@ -306,6 +311,8 @@ function UploadModal({
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
+	const { t } = useTranslation();
+
 	const handleSubmit = async () => {
 		if (!title.trim() || !content.trim()) return;
 
@@ -315,7 +322,7 @@ function UploadModal({
 		try {
 			const tags = tagsText
 				.split(",")
-				.map((t) => t.trim())
+				.map((tag) => tag.trim())
 				.filter(Boolean);
 
 			await createPolicy({
@@ -327,7 +334,9 @@ function UploadModal({
 
 			onCreated();
 		} catch (e) {
-			setError(e instanceof Error ? e.message : "Failed to create policy");
+			setError(
+				e instanceof Error ? e.message : t("knowledgeBase.createFailed"),
+			);
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -339,7 +348,7 @@ function UploadModal({
 				<div className="flex items-center justify-between mb-4">
 					<div className="flex items-center gap-3">
 						<h2 className="text-lg font-semibold text-slate-900">
-							Upload Policy
+							{t("knowledgeBase.uploadPolicy")}
 						</h2>
 						{/* Tab switcher */}
 						<div className="flex gap-1 bg-slate-100 rounded-lg p-0.5">
@@ -347,14 +356,14 @@ function UploadModal({
 								type="button"
 								className="px-2.5 py-1 text-xs font-medium rounded-md bg-white text-slate-900 shadow-sm"
 							>
-								Paste Text
+								{t("knowledgeBase.pasteText")}
 							</button>
 							<button
 								type="button"
 								onClick={onSwitchToFile}
 								className="px-2.5 py-1 text-xs font-medium rounded-md text-slate-500 hover:text-slate-700"
 							>
-								Upload File
+								{t("knowledgeBase.uploadFile")}
 							</button>
 						</div>
 					</div>
@@ -374,14 +383,14 @@ function UploadModal({
 							htmlFor="policy-title"
 							className="block text-sm font-medium text-slate-700 mb-1"
 						>
-							Title <span className="text-red-400">*</span>
+							{t("knowledgeBase.titleRequired")}
 						</label>
 						<input
 							id="policy-title"
 							type="text"
 							value={title}
 							onChange={(e) => setTitle(e.target.value)}
-							placeholder='e.g. "Premium Shipping Guarantee"'
+							placeholder={t("knowledgeBase.titlePlaceholder")}
 							className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
 							maxLength={500}
 						/>
@@ -393,7 +402,7 @@ function UploadModal({
 							htmlFor="policy-category"
 							className="block text-sm font-medium text-slate-700 mb-1"
 						>
-							Category
+							{t("knowledgeBase.categoryLabel")}
 						</label>
 						<select
 							id="policy-category"
@@ -401,11 +410,19 @@ function UploadModal({
 							onChange={(e) => setCategory(e.target.value)}
 							className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
 						>
-							<option value="">Select a category</option>
-							<option value="shipping">Shipping</option>
-							<option value="refund">Refund</option>
-							<option value="exchange">Exchange</option>
-							<option value="general">General</option>
+							<option value="">{t("common.selectCategory")}</option>
+							<option value="shipping">
+								{t("knowledgeBase.categoryShipping")}
+							</option>
+							<option value="refund">
+								{t("knowledgeBase.categoryRefund")}
+							</option>
+							<option value="exchange">
+								{t("knowledgeBase.categoryExchange")}
+							</option>
+							<option value="general">
+								{t("knowledgeBase.categoryGeneral")}
+							</option>
 						</select>
 					</div>
 
@@ -415,19 +432,21 @@ function UploadModal({
 							htmlFor="policy-content"
 							className="block text-sm font-medium text-slate-700 mb-1"
 						>
-							Policy Text <span className="text-red-400">*</span>
+							{t("knowledgeBase.policyTextRequired")}
 						</label>
 						<textarea
 							id="policy-content"
 							value={content}
 							onChange={(e) => setContent(e.target.value)}
-							placeholder="Paste the full policy text here..."
+							placeholder={t("knowledgeBase.policyTextPlaceholder")}
 							rows={8}
 							className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 resize-vertical"
 							maxLength={50000}
 						/>
 						<p className="text-xs text-slate-400 mt-1">
-							{content.length.toLocaleString()} / 50,000 characters
+							{t("knowledgeBase.charCount", {
+								n: content.length.toLocaleString(),
+							})}
 						</p>
 					</div>
 
@@ -437,14 +456,14 @@ function UploadModal({
 							htmlFor="policy-tags"
 							className="block text-sm font-medium text-slate-700 mb-1"
 						>
-							Tags
+							{t("knowledgeBase.tagsLabel")}
 						</label>
 						<input
 							id="policy-tags"
 							type="text"
 							value={tagsText}
 							onChange={(e) => setTagsText(e.target.value)}
-							placeholder="premium, warranty, electronics (comma-separated)"
+							placeholder={t("knowledgeBase.tagsPlaceholder")}
 							className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
 						/>
 					</div>
@@ -465,7 +484,7 @@ function UploadModal({
 						disabled={isSubmitting}
 						className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50"
 					>
-						Cancel
+						{t("common.cancel")}
 					</button>
 					<button
 						type="button"
@@ -474,7 +493,7 @@ function UploadModal({
 						className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
 					>
 						<Upload size={16} />
-						{isSubmitting ? "Uploading..." : "Upload"}
+						{isSubmitting ? t("common.uploading") : t("common.upload")}
 					</button>
 				</div>
 			</div>
