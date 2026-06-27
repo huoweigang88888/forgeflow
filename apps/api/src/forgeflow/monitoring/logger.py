@@ -24,21 +24,24 @@ import structlog
 _SUCCESS_LOG_SAMPLE_RATE: float = 0.01  # 1% of successful operations
 
 
-def _should_sample(_logger: logging.Logger, method_name: str, event_dict: dict) -> bool:
-    """Determine whether this log event should be emitted based on sampling.
+def _should_sample(
+    _logger: logging.Logger, method_name: str, event_dict: dict
+) -> dict:
+    """Drop a fraction of non-error log events via sampling.
 
-    Always emit ERROR and WARNING level events. Sample INFO and DEBUG
-    events at _SUCCESS_LOG_SAMPLE_RATE.
+    Structlog processor — return event_dict to keep, raise DropEvent to drop.
+    Uses method_name ("info"/"error"/...) because add_log_level runs AFTER this
+    processor in the chain, so event_dict["level"] does not exist yet.
 
-    Returns True if the event should be dropped (NOT emitted).
+    Always emits ERROR/WARNING/CRITICAL; samples INFO/DEBUG at
+    _SUCCESS_LOG_SAMPLE_RATE (default 1%).
     """
-    log_level = event_dict.get("level", "").upper()
-    if log_level in ("ERROR", "CRITICAL", "WARNING"):
-        return False  # Never drop error/warning logs
+    if method_name in ("error", "critical", "warning"):
+        return event_dict  # Never drop error/warning logs
     # Sample success logs
     if random.random() > _SUCCESS_LOG_SAMPLE_RATE:
-        return True  # Drop this log event
-    return False
+        raise structlog.DropEvent
+    return event_dict
 
 
 class SamplingFilter(logging.Filter):
