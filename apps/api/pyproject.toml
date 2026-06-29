@@ -15,7 +15,7 @@ license = { text = "MIT" }
 dependencies = [
     # Web framework
     "fastapi[standard]>=0.115,<0.120",
-    "uvicorn[standard]>=0.30,<0.32",
+    "uvicorn[standard]>=0.30,<0.50",
     # Database
     "sqlalchemy[asyncio]>=2.0,<2.1",
     "asyncpg>=0.29,<1.0",
